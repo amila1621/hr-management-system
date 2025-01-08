@@ -1,0 +1,17 @@
+<IfModule mod_rewrite.c>
+   RewriteEngine on
+    RewriteCond %{REQUEST_URI} !^public
+    RewriteRule ^(.*)$ public/$1 [L]
+
+</IfModule>
+
+# PHP Settings to Increase Limits
+<IfModule mod_php.c>
+    php_value post_max_size 20M
+    php_value upload_max_filesize 10M
+    php_value memory_limit 256M
+    php_value max_execution_time 300
+    php_value max_input_time 300
+    php_value max_input_vars 20000
+</IfModule>
+

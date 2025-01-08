@@ -1,0 +1,110 @@
+<?php $__env->startSection('content'); ?>
+    <div class="content-page">
+        <div class="content">
+            <div class="container-fluid">
+                <!-- Add form for month/year selection -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <form action="<?php echo e(route('reports.monthly-report-create-op')); ?>" method="GET" class="form-inline">
+                            <select name="month" class="form-control mr-2">
+                                <?php for($m = 1; $m <= 12; $m++): ?>
+                                    <option value="<?php echo e($m); ?>" <?php echo e(\Carbon\Carbon::parse($monthYear)->format('n') == $m ? 'selected' : ''); ?>>
+                                        <?php echo e(\Carbon\Carbon::create()->month($m)->format('F')); ?>
+
+                                    </option>
+                                <?php endfor; ?>
+                            </select>
+                            
+                            <select name="year" class="form-control mr-2">
+                                <?php for($y = date('Y') - 2; $y <= date('Y') + 1; $y++): ?>
+                                    <option value="<?php echo e($y); ?>" <?php echo e(\Carbon\Carbon::parse($monthYear)->format('Y') == $y ? 'selected' : ''); ?>>
+                                        <?php echo e($y); ?>
+
+                                    </option>
+                                <?php endfor; ?>
+                            </select>
+                            
+                            <button type="submit" class="btn btn-primary">Filter</button>
+                        </form>
+                    </div>
+                </div>
+
+                <h4 class="page-title">Monthly and Double Pay Hours Report for <?php echo e(\Carbon\Carbon::parse($monthYear)->format('F Y')); ?></h4>
+
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-body">
+
+                                <div class="table">
+                                    <table id="datatable-buttons2" class="table table-striped table-bordered"
+                                        style="border-collapse: collapse; border-spacing: 0; width: 100%">
+                                        <thead>
+                                            <tr>
+                                                <th>Work Name</th>
+                                                <th>Work Hours</th>
+                                                <th>Double Pay Hours</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php $__currentLoopData = $eventSalaries; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $salary): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                <?php if(Auth::user()->role == 'supervisor' || Auth::user()->role == 'operation'): ?>
+                                                    <?php if($salary['tourGuide']->supervisor == Auth::id()): ?>
+                                                        <tr>
+                                                            <td><?php echo e($salary['tourGuide']->name); ?></td>
+                                                            <td><?php echo e(sprintf("%02d:%02d", floor($salary['totalNormalHours']), fmod($salary['totalNormalHours'], 1) * 60)); ?></td>
+                                                             <td><?php echo e(sprintf("%02d:%02d", floor($salary['totalHolidayHours']), fmod($salary['totalHolidayHours'], 1) * 60)); ?></td>
+                                                        </tr>
+                                                    <?php endif; ?>
+                                                <?php endif; ?>
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include only the basic DataTables script -->
+    <script src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            // Custom sorting function for time values (HH:MM format)
+            jQuery.extend(jQuery.fn.dataTableExt.oSort, {
+                "time-pre": function(a) {
+                    if (!a) return 0;
+                    let time = a.split(':');
+                    return parseInt(time[0]) * 60 + parseInt(time[1]);
+                },
+                
+                "time-asc": function(a, b) {
+                    return a - b;
+                },
+                
+                "time-desc": function(a, b) {
+                    return b - a;
+                }
+            });
+
+            $('#datatable-buttons2').DataTable({
+                ordering: true,
+                order: [[0, 'asc']],
+                paging: false,
+                info: false,
+                columnDefs: [
+                    { 
+                        type: 'time',
+                        targets: [1, 2]
+                    }
+                ]
+            });
+        });
+    </script>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('partials.main', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /home/nordpzbm/hr.nordictravels.tech/resources/views/reports/monthly-op.blade.php ENDPATH**/ ?>

@@ -1,0 +1,33 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::table('event_salaries', function (Blueprint $table) {
+            $table->integer('approval_status')->default(0)->comment('0 - Pending, 1 - Approved, 2 - Rejected');
+            $table->string('approval_comment')->nullable;
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::table('event_salaries', function (Blueprint $table) {
+            $table->dropColumn(['approval_status', 'approval_comment']);
+        });
+    }
+};

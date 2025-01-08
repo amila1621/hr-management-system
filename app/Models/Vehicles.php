@@ -1,0 +1,15 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Vehicles extends Model
+{
+    use HasFactory;
+
+    protected $table = 'vehicles';
+
+    protected $fillable = ['name', 'type', 'number', 'number_of_seats', 'number_of_baby_seats', 'status'];
+}
