@@ -41,10 +41,11 @@
                                     @csrf
                                     <div class="form-group">
                                         <label for="month">Month and Year</label>
-                                        <input type="month" value="{{ date('Y-m') }}" name="month" class="form-control" required>
+                                        <input type="month" value="{{ date('Y-m') }}" name="month" class="form-control" required onclick="this.showPicker()">
                                     </div>
                                     
                                     <button type="submit" class="btn btn-primary waves-effect waves-light">Fetch</button>
+                                    <button type="button" onclick="fetchLastMonth()" class="btn btn-secondary waves-effect waves-light ml-2">Fetch Last Month</button>
                                 </form>
                             </div>
                         </div>
@@ -53,4 +54,14 @@
             </div>
         </div>
     </div>
+
+    <script>
+    function fetchLastMonth() {
+        const monthInput = document.querySelector('input[type="month"]');
+        const currentDate = new Date(monthInput.value);
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        monthInput.value = currentDate.toISOString().slice(0, 7);
+        monthInput.form.submit();
+    }
+    </script>
 @endsection
