@@ -139,6 +139,24 @@ $(document).ready(function() {
     table.buttons().container()
             .appendTo('#datatable-buttons_wrapper .col-md-6:eq(0)');
     } );
+
+    @elseif(Auth::user()->role == 'hr-assistant')
+    $(document).ready(function() {
+    $('#datatable').DataTable();
+
+    //Buttons examples
+    var table = $('#datatable-buttons').DataTable({
+        lengthChange: true,
+        searching: true,
+        "pageLength": 100,
+        paging: false,
+        ordering: true,
+        info: false
+    });
+
+    table.buttons().container()
+            .appendTo('#datatable-buttons_wrapper .col-md-6:eq(0)');
+    } );
     
     @else
 
@@ -158,6 +176,7 @@ $(document).ready(function() {
     table.buttons().container()
             .appendTo('#datatable-buttons_wrapper .col-md-6:eq(0)');
     } );
+
     @endif
 </script>
 </body>

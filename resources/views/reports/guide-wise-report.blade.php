@@ -150,11 +150,11 @@ $totalHolidayNightHours = 0;
                                                     <tr data-event-id="{{ $salary->event->id }}" data-salary-id="{{ $salary->id }}">
                                                         <td>
                                                             @if ($salary->guide_start_time)
-                                                                <!-- {{ \Carbon\Carbon::parse($salary->guide_start_time)->format('d.m.Y') }} -->
+                                                                {{ \Carbon\Carbon::parse($salary->guide_start_time)->format('d') }}
                                                                 <!-- <br> -->
                                                                 {{ \Carbon\Carbon::parse($salary->guide_start_time)->format('D.') }}
                                                             @elseif($salary->event->start_time)
-                                                                <!-- {{ \Carbon\Carbon::parse($salary->event->start_time)->format('d.m.Y') }} -->
+                                                                {{ \Carbon\Carbon::parse($salary->event->start_time)->format('d') }}
                                                                 <!-- <br> -->
                                                                 {{ \Carbon\Carbon::parse($salary->event->start_time)->format('D.') }}
                                                             @else

@@ -55,7 +55,7 @@
                                     @csrf
                                     <div class="form-group">
                                         <label for="tourName">Tour Name</label>
-                                        <input type="text" name="tourName" id="tourName" class="form-control" value='Manually Added' required>
+                                        <input type="text" name="tourName" id="tourName" class="form-control" required>
                                     </div>
                                     <div id="guideFieldsContainer">
                                         <!-- Guide entries will be added here dynamically -->
