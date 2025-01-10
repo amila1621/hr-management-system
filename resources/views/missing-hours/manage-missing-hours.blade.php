@@ -312,6 +312,10 @@
         z-index: 100;
         background: #fff;
     }
+
+    .navbar-right {
+        margin-top: 15px;
+    }
 </style>
 
 <div class="modal fade" id="editMissingHoursModal" tabindex="-1" role="dialog">

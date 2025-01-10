@@ -9,13 +9,27 @@
             <!-- LOGO -->
             <div class="topbar-left">
                 <a href="{{ route('dashboard') }}" class="logo">
-                    {{-- <img src="{{asset('assets/images/logo-light.png')}}" class="logo-lg" alt="" height="50">
-                    <img src="{{asset('assets/images/logo-light.png')}}" class="logo-sm" alt="" height="24"> --}}
-                    <h4 style="margin-top: 19px;">NUT HR</h4>
+                    <h4 class="header-text" style="margin: 19px 0px 0px -60px;">NUT HR</h4>
                 </a>
             </div>
 
+            <!-- Add this CSS in the head section or your stylesheet -->
+            <style>
+                .header-text {
+                    margin: 19px 0px 0px -60px;
+                }
 
+                .header-text.hidden {
+                    display: none;
+                }
+            </style>
+
+            <!-- Add this JavaScript -->
+            <script>
+                document.querySelector('.button-menu-mobile').addEventListener('click', function() {
+                    document.querySelector('.header-text').classList.toggle('hidden');
+                });
+            </script>
 
             <nav class="navbar-custom">
                 <ul class="navbar-right list-inline float-right mb-0">
@@ -52,7 +66,7 @@
 
                 <ul class="list-inline menu-left mb-0">
                     <li class="float-left">
-                        <button class="button-menu-mobile open-left waves-effect">
+                        <button class="button-menu-mobile open-left waves-effect"  style="z-index: 1; margin: -14px -60px -60px -60px;">
                             <i class="mdi mdi-menu"></i>
                         </button>
                     </li>

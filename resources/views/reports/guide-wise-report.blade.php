@@ -629,4 +629,8 @@ $totalHolidayNightHours = 0;
     #datatable-buttons_filter label {
         color: white;
     }
+
+    .navbar-right {
+        margin-top: 15px;
+    }
 </style>
