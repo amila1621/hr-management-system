@@ -10,7 +10,7 @@
             <div class="topbar-left">
                 <a href="<?php echo e(route('dashboard')); ?>" class="logo">
                     
-                    <h4>Dashboard</h4>
+                    <h4 style="margin-top: 19px;">NUT HR</h4>
                 </a>
             </div>
 
@@ -28,7 +28,7 @@
                         </a>
                     </li>
 
-                    <li class="dropdown notification-list list-inline-item">
+                    <li class="dropdown notification-list list-inline-item" style="margin-top: 0px;">
                         <div class="dropdown notification-list nav-pro-img">
                             <a class="dropdown-toggle nav-link arrow-none waves-effect nav-user" data-toggle="dropdown"
                                 href="#" role="button" aria-haspopup="false" aria-expanded="false">

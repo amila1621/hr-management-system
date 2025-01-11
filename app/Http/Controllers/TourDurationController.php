@@ -128,5 +128,17 @@ class TourDurationController extends Controller
         return redirect()->back()->with('success', 'Updated successfully!');
     }
 
+    public function updatedateForBusDrivers(Request $request)
+    {
+        DB::table('updatedate')
+        ->where('id', 1)
+        ->update([
+            'bus_driver_updated_date' => $request->input('bus_driver_updated_date'),
+         
+        ]);
+    
+        return redirect()->back()->with('success', 'Updated successfully!');
+    }
+
    
 }
