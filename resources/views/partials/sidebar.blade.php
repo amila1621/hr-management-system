@@ -280,6 +280,14 @@
                                     <i class="fas fa-clock"></i> Pending Approvals
                                 </a>
                             </li>
+
+                            <li>
+                                <a href="{{ route('guides.ranking-for-hours-bus-drivers') }}" class="waves-effect"><i
+                                        class="dripicons-calendar"></i><span> Ranking for Hours(Bus Drivers)
+                                    </span></a>
+                            </li>
+
+                            
                             <li>
                                 <a href="{{ route('manager.guide-report') }}" class="waves-effect">
                                     <i class="dripicons-meter"></i><span> Bus Driver Report </span>
@@ -319,12 +327,21 @@
                                         class="dripicons-calendar"></i><span> View Holiday Time Plan  
                                     </span></a>
                             </li> --}}
-
+   <li>
+                                <a href="{{ route('guides.working-hours') }}" class="waves-effect"><i
+                                        class="dripicons-calendar"></i><span> Ranking for hours
+                                    </span></a>
+                            </li>
                             @elseif (Auth::user()->role == 'operation')
 
                             <li>
                                 <a href="{{ route('guides.working-hours') }}" class="waves-effect"><i
-                                        class="dripicons-calendar"></i><span> Ranking for hours
+                                        class="dripicons-calendar"></i><span> Ranking for Hours
+                                    </span></a>
+                            </li>
+                            <li>
+                                <a href="{{ route('guides.ranking-for-hours-bus-drivers') }}" class="waves-effect"><i
+                                        class="dripicons-calendar"></i><span> Ranking for Hours(Bus Drivers)
                                     </span></a>
                             </li>
                             <li>

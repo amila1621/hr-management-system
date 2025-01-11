@@ -33,6 +33,7 @@ use Illuminate\Support\Facades\File;
 
 Route::middleware(['auth'])->group(function () {
     Route::post('/updatedate', [TourDurationController::class, 'updatedate'])->name('updatedate');
+    Route::post('/updatedateForBusDrivers', [TourDurationController::class, 'updatedateForBusDrivers'])->name('updatedateForBusDrivers');
     Route::get('/fixxx', [GoogleCalendarController::class, 'fixxx'])->name('fixxx');
 
 
@@ -114,6 +115,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/error-log', [SalaryController::class, 'errorLog'])->name('errors.log');
     Route::get('/error-filter', [SalaryController::class, 'errorFilter'])->name('errors.filter');
     Route::match(['get', 'post'], '/reports/working-hours', [ReportController::class, 'calculateWorkingHours'])->name('guides.working-hours');
+    Route::match(['get', 'post'], '/reports/ranking-for-hours-bus-drivers', [ReportController::class, 'rankingForHoursBusDrivers'])->name('guides.ranking-for-hours-bus-drivers');
 
 
     Route::get('tour-durations/{id}/edit', [TourDurationController::class, 'edit'])->name('tour-durations.edit');

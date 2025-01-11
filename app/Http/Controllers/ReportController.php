@@ -1412,6 +1412,90 @@ class ReportController extends Controller
         return sprintf("%d.%02d", $hours, $minutes);
     }
 
+    public function rankingForHoursBusDrivers(Request $request){
+
+        //we only need the drivers who are bus drivers
+        $juhas_guide_id = 74;
+        $busDriversId = ManagerGuideAssignment::where('manager_id', $juhas_guide_id)->pluck('guide_id')->toArray();
+
+         // Get the earliest pending approval date
+         $earliestPendingDate = EventSalary::where('is_guide_updated', 1)
+         ->where('approval_status', 0)
+         ->min('guide_start_time');
+
+     // Initialize an array to store working hours for all 5 periods
+     $guideWorkingHours = [];
+
+     // Use the date from the request if available, otherwise use the given date
+     $currentweek = $request->input('start_date', '2024-10-14');
+     
+     $fixedStartDate = Carbon::createFromFormat('Y-m-d', $currentweek)->startOfWeek();
+
+     // Loop through each of the 5 3-week periods
+     for ($period = 1; $period <= 5; $period++) {
+         // Define the start and end dates for the current 3-week period
+         $startDate = $fixedStartDate->copy()->addWeeks(($period - 1) * 3);
+         $endDate = $fixedStartDate->copy()->addWeeks($period * 3 - 1)->endOfWeek();
+
+         // Log the start and end dates for the current period
+         $eventSalaries = EventSalary::whereIn('guideId', $busDriversId)
+         ->whereHas('event', function ($query) use ($startDate, $endDate) {
+             $query->whereBetween('start_time', [$startDate, $endDate])
+                   ->where('event_id', 'not like', 'manual-missing-hours%');
+         })
+         
+         ->whereIn('approval_status', [1, 2])  // Only get approved (1) or adjusted (2) entries
+         ->get();
+
+         // Group by guide and calculate the total working hours for this period
+         $currentPeriodWorkingHours = $eventSalaries->groupBy('guideId')->map(function ($salaries) {
+             $totalMinutes = $salaries->sum(function ($salary) {
+                 $parts = explode('.', (string)$salary->normal_hours);
+                 $hours = intval($parts[0]);
+                 $minutes = isset($parts[1]) ? intval(substr($parts[1] . '00', 0, 2)) : 0;
+                 return $hours * 60 + $minutes;
+             });
+
+             $totalHours = floor($totalMinutes / 60);
+             $remainingMinutes = $totalMinutes % 60;
+
+             return sprintf('%d.%02d', $totalHours, $remainingMinutes);
+         });
+
+
+         // Add the working hours for the current period to the guideWorkingHours array
+         foreach ($currentPeriodWorkingHours as $guideId => $hours) {
+             if (!isset($guideWorkingHours[$guideId])) {
+                 $guideWorkingHours[$guideId] = [];
+             }
+             // Store the total hours for this 3-week period
+             $guideWorkingHours[$guideId]["period{$period}_hours"] = $hours;
+
+             // Log the guide's working hours for this period
+         }
+     }
+
+     // Fetch the guide details and attach the working hours for all periods
+     $guides = TourGuide::whereIn('id', array_keys($guideWorkingHours))->get()->map(function ($guide) use ($guideWorkingHours) {
+         $guide->working_hours = $guideWorkingHours[$guide->id];
+         return $guide;
+     });
+
+     // Sort guides by total hours worked across all periods in descending order
+     $guides = $guides->sortByDesc(function ($guide) {
+         $totalHours = array_sum($guide->working_hours); // Sum all period hours
+         return $totalHours;
+     });
+     Log::info($guides);
+     // Define the number of weeks (15 weeks in total since 5 periods of 3 weeks)
+     $updatedate =  DB::table('updatedate')
+         ->where('id', 1)->first();
+
+     // Render the view and pass the required variables
+     return view('reports.ranking-for-hours-bus-drivers', compact('guides', 'updatedate', 'currentweek', 'earliestPendingDate'))
+         ->with('dateFormat', 'd.m.Y');
+    }
+
     public function calculateWorkingHours(Request $request)
     {
         // Get the earliest pending approval date
