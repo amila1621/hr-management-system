@@ -149,7 +149,7 @@
             font-weight: 600;
         }
 
-        #aiCalculationModal .modal-body {
+        #aiCalculationModal {
             max-height: 90vh;
             overflow-y: auto;
         }
@@ -169,6 +169,30 @@
         .card.h-100 .card-body {
             flex: 1;
             min-height: 400px; /* Minimum height fallback */
+        }
+
+        /* Custom scrollbar styles */
+        .modal-body::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-body::-webkit-scrollbar-track {
+            background: #4a4a4a;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* For Firefox */
+        .modal-body {
+            scrollbar-width: thin;
+            scrollbar-color: #888 #4a4a4a;
         }
     </style>
     <div class="content-page">
@@ -528,7 +552,7 @@
 
                     <div class="row">
                         <!-- Left side - existing form -->
-                        <div class="col-md-6">
+                        <div class="col-md-6" style="max-height: 60vh; overflow-y: auto; overflow-x: hidden; padding-right: 15px;">
                             <form id="aiCalculationForm">
                                 <!-- Event Info Section -->
                                 <div class="card mb-3">
@@ -584,12 +608,12 @@
                         </div>
                         
                         <!-- Right side - event description -->
-                        <div class="col-md-6">
+                        <div class="col-md-6" style="height: 60vh; overflow-y: auto;">
                             <div class="card h-100">
                                 <div class="card-header">
                                     <h6 class="mb-0">Event Description</h6>
                                 </div>
-                                <div class="card-body" style="height: calc(100vh - 300px); overflow-y: auto;">
+                                <div class="card-body">
                                     <div id="eventDescription" style="white-space: pre-wrap;">
                                     </div>
                                 </div>
