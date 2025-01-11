@@ -24,13 +24,6 @@
                 }
             </style>
 
-            <!-- Add this JavaScript -->
-            <script>
-                document.querySelector('.button-menu-mobile').addEventListener('click', function() {
-                    document.querySelector('.header-text').classList.toggle('hidden');
-                });
-            </script>
-
             <nav class="navbar-custom">
                 <ul class="navbar-right list-inline float-right mb-0">
 
