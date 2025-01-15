@@ -51,16 +51,11 @@
             overflow: visible !important;
         }
 
-        .slimscroll-menu {
-            overflow-y: auto !important;
-            height: calc(100vh - 60px) !important;
-            position: fixed;
-        }
-
         /* Card and modal adjustments */
         .card-body {
             font-size: 13px;
             padding: 1rem;
+            max-height: 80vh;
         }
 
         .modal-body {
@@ -171,28 +166,10 @@
             min-height: 400px; /* Minimum height fallback */
         }
 
-        /* Custom scrollbar styles */
-        .modal-body::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .modal-body::-webkit-scrollbar-track {
-            background: #4a4a4a;
-        }
-
-        .modal-body::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
-        }
-
-        .modal-body::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-
-        /* For Firefox */
-        .modal-body {
-            scrollbar-width: thin;
-            scrollbar-color: #888 #4a4a4a;
+        .modal-open {
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
         }
     </style>
     <div class="content-page">
@@ -608,7 +585,14 @@
                         </div>
                         
                         <!-- Right side - event description -->
-                        <div class="col-md-6" style="height: 60vh; overflow-y: auto;">
+                        <div class="col-md-6" style=
+                            "height: 60vh;
+                            overflow-y: auto;
+                            background-color: #2b3547;
+                            padding: 25px;
+                            display: flex;
+                            flex-direction: column;
+                            transition: all 0.3s ease;">
                             <div class="card h-100">
                                 <div class="card-header">
                                     <h6 class="mb-0">Event Description</h6>
@@ -868,6 +852,18 @@
         // Recalculate for all guide entries
         $('.guide-entry').each(function() {
             calculatePickupDuration($(this).find('.pickup-location'));
+        });
+    });
+
+    $(document).ready(function() {
+        $('.card-body').on('scroll touchmove mousewheel', function(e) {
+            e.stopPropagation();
+        });
+
+        $('#aiCalculationModal').on('show.bs.modal', function() {
+            $('body').addClass('modal-open');
+        }).on('hidden.bs.modal', function() {
+            $('body').removeClass('modal-open');
         });
     });
     </script>
