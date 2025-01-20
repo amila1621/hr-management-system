@@ -11,6 +11,7 @@ use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\SalaryUpdatedController;
+use App\Http\Controllers\SickLeaveController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\SupervisorController;
 use App\Http\Controllers\TourDurationController;
@@ -77,6 +78,12 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/create-a-new-tour', [ReportController::class, 'createNewTour'])->name('tours.create-a-new-tour');
     Route::post('/tours/store-manual', [ReportController::class, 'storeManual'])->name('tours.store-manual');
+    
+    Route::get('/create-a-sick-leave-tour', [SickLeaveController::class, 'createNewSickLeaveTour'])->name('tours.create-a-sick-leave-tour');
+    Route::post('/tours/sick-leave-store-manual', [SickLeaveController::class, 'sickLeaveStoreManual'])->name('tours.sick-leave-store-manual');
+    Route::put('/sick-leaves/{id}', [SickLeaveController::class, 'sickLeaveUpdate']);
+    Route::get('/tours/sick-leave-tours', [SickLeaveController::class, 'index'])->name('tours.sick-leave-tours');
+    Route::delete('/tours/sick-leaves-destroy/{id}', [SickLeaveController::class, 'destroy'])->name('sick-leaves.destroy');
 
     Route::get('/event-salary/{id}', [SalaryController::class, 'eventsalary'])->name('salary.eventsalary');
     Route::post('/salary/add-extra-hours', [SalaryController::class, 'addExtraHours'])->name('salary.add-extra-hours');

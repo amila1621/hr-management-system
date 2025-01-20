@@ -62,8 +62,20 @@
 
                             <li>
                                 <a href="{{ route('tours.create-a-new-tour') }}" class="waves-effect"><i
-                                        class="dripicons-calendar"></i><span> Add a New Tour
+                                        class="dripicons-calendar"></i><span> + New Tour
                                     </span></a>
+                            </li>
+
+                            <li>
+                                <a href="javascript:void(0);" class="waves-effect"><i
+                                        class="dripicons-user-group"></i><span> + Sick Leave Tour <span
+                                            class="float-right menu-arrow"><i class="mdi mdi-chevron-right"></i></span>
+                                    </span></a>
+                                <ul class="submenu">
+                                    <li><a href="{{ route('tours.create-a-sick-leave-tour') }}"> + Sick Leave Tour </a></li>
+                                    <li><a href="{{ route('tours.sick-leave-tours') }}"> Manage Sick Leave Tours </a></li>
+
+                                </ul>
                             </li>
 
 
@@ -198,9 +210,21 @@
 
                             <li>
                                 <a href="{{ route('tours.create-a-new-tour') }}" class="waves-effect"><i
-                                        class="dripicons-calendar"></i><span> Add a New Tour
+                                        class="dripicons-calendar"></i><span>  + New Tour
                                     </span></a>
                             </li>
+
+                            <li>
+                                <a href="javascript:void(0);" class="waves-effect"><i
+                                        class="dripicons-user-group"></i><span> + Sick Leave Tour <span
+                                            class="float-right menu-arrow"><i class="mdi mdi-chevron-right"></i></span>
+                                    </span></a>
+                                <ul class="submenu">
+                                    <li><a href="{{ route('tours.create-a-sick-leave-tour') }}"> + Sick Leave Tour </a></li>
+
+                                </ul>
+                            </li>
+
 
 
                             <li>
