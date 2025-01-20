@@ -69,3 +69,14 @@
 
         </div>
         <!-- Top Bar End -->
+
+        <script>
+            // Add event listeners for modal open/close
+            $('#aiCalculationModal').on('show.bs.modal', function () {
+                document.body.style.overflow = 'hidden';
+            });
+
+            $('#aiCalculationModal').on('hidden.bs.modal', function () {
+                document.body.style.overflow = 'auto';
+            });
+        </script>
