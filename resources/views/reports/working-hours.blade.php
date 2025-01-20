@@ -151,6 +151,10 @@
                                     {{ $startDate->copy()->addWeeks(12)->format('d/m') }} to
                                     {{ $startDate->copy()->addWeeks(15)->subDay()->format('d/m') }}
                                 </th>
+                                <th class="sortable" data-sort="number">6th 3 Week <br>
+                                    {{ $startDate->copy()->addWeeks(15)->format('d/m') }} to
+                                    {{ $startDate->copy()->addWeeks(18)->subDay()->format('d/m') }}
+                                </th>
 
                             </tr>
                         </thead>
@@ -184,6 +188,10 @@
                                             class="{{ ($guide->working_hours['period5_hours'] ?? 0) > 144 ? 'table-warning' : (($guide->working_hours['period5_hours'] ?? 0) > 120 ? '' : '') }}">
                                             {{ formatTime($guide->working_hours['period5_hours'] ?? 0) }}
                                         </td>
+                                        <td
+                                            class="{{ ($guide->working_hours['period6_hours'] ?? 0) > 144 ? 'table-warning' : (($guide->working_hours['period6_hours'] ?? 0) > 120 ? '' : '') }}">
+                                            {{ formatTime($guide->working_hours['period6_hours'] ?? 0) }}
+                                        </td>
                                     </tr>
                                 @elseif (Auth::user()->role == 'supervisor' || Auth::user()->role == 'operation')
                                     @if ($guide->supervisor == Auth::id())
@@ -213,6 +221,10 @@
                                             <td
                                                 class="{{ ($guide->working_hours['period5_hours'] ?? 0) > 144 ? 'table-warning' : (($guide->working_hours['period5_hours'] ?? 0) > 120 ? '' : '') }}">
                                                 {{ formatTime($guide->working_hours['period5_hours'] ?? 0) }}
+                                            </td>
+                                            <td
+                                                class="{{ ($guide->working_hours['period6_hours'] ?? 0) > 144 ? 'table-warning' : (($guide->working_hours['period6_hours'] ?? 0) > 120 ? '' : '') }}">
+                                                {{ formatTime($guide->working_hours['period6_hours'] ?? 0) }}
                                             </td>
                                         </tr>
                                     @endif

@@ -1512,7 +1512,7 @@ class ReportController extends Controller
         $fixedStartDate = Carbon::createFromFormat('Y-m-d', $currentweek)->startOfWeek();
 
         // Loop through each of the 5 3-week periods
-        for ($period = 1; $period <= 5; $period++) {
+        for ($period = 1; $period <= 6; $period++) {
             // Define the start and end dates for the current 3-week period
             $startDate = $fixedStartDate->copy()->addWeeks(($period - 1) * 3);
             $endDate = $fixedStartDate->copy()->addWeeks($period * 3 - 1)->endOfWeek();
@@ -1549,8 +1549,6 @@ class ReportController extends Controller
                 // Store the total hours for this 3-week period
                 $guideWorkingHours[$guideId]["period{$period}_hours"] = $hours;
 
-                // Log the guide's working hours for this period
-                Log::info("Guide ID {$guideId}: Period {$period} - Start Date: {$startDate->toDateString()}, End Date: {$endDate->toDateString()}, Total Hours: {$hours}");
             }
         }
 
@@ -1565,7 +1563,6 @@ class ReportController extends Controller
             $totalHours = array_sum($guide->working_hours); // Sum all period hours
             return $totalHours;
         });
-        Log::info($guides);
         // Define the number of weeks (15 weeks in total since 5 periods of 3 weeks)
         $updatedate =  DB::table('updatedate')
             ->where('id', 1)->first();

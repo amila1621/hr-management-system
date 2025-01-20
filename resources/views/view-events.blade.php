@@ -203,7 +203,7 @@
                 <div class="page-title-box">
 
                     <div class="row align-items-center ">
-                        <div class="col-md-8">
+                        <div class="col-md-6">
                             <div class="page-title-box">
                                 <h4 class="page-title">Manage Events</h4>
                                 <ol class="breadcrumb">
@@ -217,8 +217,30 @@
                                 </ol>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <a class="btn btn-primary w-100" href="{{route('calculate-all')}}">Calculate All</a>
+                        <div class="col-md-6">
+                            @if (Auth::user()->role == 'admin' || Auth::user()->role == 'hr-assistant')
+                        <form action="/updatedate" method="post">
+                            @csrf
+                            <div style="margin-bottom: 10px;" class="row">
+                                <div class="col-6">
+                                    <p class="mb-0">Tour Hours - Update until {{ \Carbon\Carbon::parse($updatedate->date)->format('d/m/Y') }}</p>
+                                    @if($updatedate->until_date_pending_approvals)
+                                        <!--<div class="alert alert-warning">-->
+                                            <p class="">
+                                            Chores Hours - Update until  {{ \Carbon\Carbon::parse($updatedate->until_date_pending_approvals)->format('d/m/Y') }}
+                                            </p>
+                                        <!--</div>-->
+                                    @endif
+                                </div>
+                                <div class="col-4">
+                                    <input type="text" value="" class="form-control flatpickr" name="date" placeholder="Select Date...">
+                                </div>
+                                <div class="col-2">
+                                    <button class="btn btn-primary btn-sm" type="submit">Update</button>
+                                </div>
+                            </div>
+                        </form>
+                        @endif
                         </div>
 
                     </div>
@@ -870,6 +892,14 @@
             calculatePickupDuration($(this).find('.pickup-location'));
         });
     });
+
+    flatpickr(".flatpickr", {
+            dateFormat: "Y-m-d",
+            theme: "dark",
+            allowInput: true,
+            altInput: true,
+            altFormat: "d/m/Y",
+        });
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
 @endsection
