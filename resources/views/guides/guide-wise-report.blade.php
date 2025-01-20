@@ -73,98 +73,91 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach ($eventSalaries as $salary)
-                                                <tr>
+                                            @foreach ($combinedData as $record)
+                                                <tr @if($record["type"] == "sick_leave") style="background-color:#806600;" @endif>
                                                     <td>
-                                                        @if($salary->guide_start_time)
-                                                            {{ \Carbon\Carbon::parse($salary->guide_start_time)->format('d.m.Y') }}
-                                                        @elseif($salary->event->start_time)
-                                                            {{ \Carbon\Carbon::parse($salary->event->start_time)->format('d.m.Y') }}
+                                                        @if($record['type'] == 'event')
+                                                            {{ \Carbon\Carbon::parse($record['start_time'])->format('d.m.Y') }}
+                                                        @else
+                                                            {{ \Carbon\Carbon::parse($record['date'])->format('d.m.Y') }}
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        {{ $record['tour_name'] }}
+                                                        @if($record['type'] == 'sick_leave')
+                                                            <span class="badge badge-info">Sick Leave</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if($record['type'] == 'event')
+                                                            @if(isset($record['guide_times']))
+                                                                @foreach(json_decode($record['guide_times'], true) ?? [] as $time)
+                                                                    {{ \Carbon\Carbon::parse($time['start'])->format('H:i') }} - 
+                                                                    {{ \Carbon\Carbon::parse($time['end'])->format('H:i') }}<br>
+                                                                @endforeach
+                                                            @else
+                                                                {{ \Carbon\Carbon::parse($record['start_time'])->format('H:i') }} - 
+                                                                {{ \Carbon\Carbon::parse($record['end_time'])->format('H:i') }}
+                                                            @endif
+                                                        @else
+                                                            {{ \Carbon\Carbon::parse($record['start_time'])->format('H:i') }} - 
+                                                            {{ \Carbon\Carbon::parse($record['end_time'])->format('H:i') }}
+                                                        @endif
+                                                    </td>
+                                                    
+                                                    <td>{{ formatTime($record['normal_hours']) }}</td>
+                                                    <td>{{ formatTime($record['holiday_hours']) }}</td>
+                                                    <td>{{ formatTime($record['normal_night_hours']) }}</td>
+                                                    <td>{{ formatTime($record['holiday_night_hours']) }}</td>
+                                                    
+                                                    <td>
+                                                        @if($record['type'] == 'event')
+                                                            @if ($record['approval_status'] == 1)
+                                                                <span class="badge badge-success">Approved</span>
+                                                            @elseif ($record['approval_status'] == 2)
+                                                                <span class="badge badge-secondary">Adjusted</span>
+                                                            @elseif ($record['approval_status'] == 3)
+                                                                <span class="badge badge-warning">Needs More Info</span>
+                                                            @elseif ($record['approval_status'] == 4)
+                                                                <span class="badge badge-danger">Rejected</span>
+                                                            @else
+                                                                <span class="badge badge-warning">Pending</span>
+                                                            @endif
+                                                        @else
+                                                            <span class="badge badge-success">Approved</span>
+                                                        @endif
+                                                    </td>
+                                                    
+                                                    <td>
+                                                        @if($record['type'] == 'event')
+                                                            {{ $record['approval_comment'] ?? 'No comment' }}
                                                         @else
                                                             N/A
                                                         @endif
                                                     </td>
-                                                    <td>{{ $salary->event->name }}</td>
+                                                    
                                                     <td>
-                                                        @if($salary->guide_times)
-                                                            @foreach(json_decode($salary->guide_times, true) ?? [] as $time)
-                                                                {{ \Carbon\Carbon::parse($time['start'])->format('H:i') }} - 
-                                                                {{ \Carbon\Carbon::parse($time['end'])->format('H:i') }}<br>
-                                                            @endforeach
+                                                        @if($record['type'] == 'event')
+                                                            {{ $record['guide_comment'] ?? 'No comment' }}
                                                         @else
-                                                            @if($salary->guide_start_time)
-                                                                {{ \Carbon\Carbon::parse($salary->guide_start_time)->format('H:i') }} - 
-                                                                {{ \Carbon\Carbon::parse($salary->guide_end_time)->format('H:i') }}
-                                                            @else
-                                                                N/A
-                                                            @endif
+                                                            N/A
                                                         @endif
                                                     </td>
                                                     
-                                                    @if ($salary->approval_status != 4)
-                                                        
-                                                    <td>{{ formatTime($salary->normal_hours) }}</td>
-                                                    <td>{{ formatTime($salary->holiday_hours) }}</td>
-                                                    <td>{{ formatTime($salary->normal_night_hours) }}</td>
-                                                    <td>{{ formatTime($salary->holiday_night_hours) }}</td>
-                                                    @else
-                                                        <td>N/A</td>
-                                                        <td>N/A</td>
-                                                        <td>N/A</td>
-                                                        <td>N/A</td>
-                                                    @endif
-                                                    
-                                                   
-                                                    
-                                                    
                                                     <td>
-                                                        @if ($salary->is_chore == 0  && $salary->approval_status == 1)
-                                                            <span class="badge badge-success">Approved</span>
-                                                        @elseif ($salary->is_chore == 0 && $salary->approval_status == 0)
-                                                            <span class="badge badge-warning">Pending</span>
-                                                        @elseif ($salary->approval_status == 1)
-                                                            <span class="badge badge-success">Approved</span>
-                                                        @elseif ($salary->approval_status == 2)
-                                                            <span class="badge badge-secondary">Adjusted</span>
-                                                        @elseif ($salary->approval_status == 3)
-                                                            <span class="badge badge-warning">Needs More Info</span>
-                                                        @elseif ($salary->approval_status == 4)
-                                                            <span class="badge badge-danger">Rejected</span>
-                                                        @else
-                                                            <span class="badge badge-warning">Pending</span>
-                                                        @endif
-                                                    </td>
-                                                    <td>
-                                                        @if ($salary->approval_comment)
-                                                            {{ $salary->approval_comment }}
-                                                        @else
-                                                            No comment
-                                                        @endif
-                                                    </td>
-                                                    <td>
-                                                        @if ($salary->guide_comment)
-                                                            {{ $salary->guide_comment }}
-                                                        @else
-                                                            No comment
-                                                        @endif
-                                                    </td>
-                                                    <td>
-                                                        @if ($salary->is_chore == 1 && $salary->is_guide_updated == 0 || $salary->approval_status == 3)
+                                                        @if($record['type'] == 'event' && 
+                                                            ($record['is_chore'] == 1 && $record['is_guide_updated'] == 0 || 
+                                                            $record['approval_status'] == 3))
                                                             <button class="btn btn-primary btn-sm edit-hours-btn"
-                                                                data-event-salary-id="{{ $salary->id }}"
-                                                                data-guide-start-time="{{ $salary->guide_start_time ? \Carbon\Carbon::parse($salary->guide_start_time)->format('d.m.Y H:i') : '' }}"
-                                                                data-guide-end-time="{{ $salary->guide_end_time ? \Carbon\Carbon::parse($salary->guide_end_time)->format('d.m.Y H:i') : '' }}"
-                                                                data-guide-comment="{{ $salary->guide_comment }}"
-                                                                data-tour-date="{{ \Carbon\Carbon::parse($salary->event->start_time)->format('d.m.Y') }}">
+                                                                data-event-salary-id="{{ $record['id'] }}"
+                                                                data-guide-start-time="{{ $record['start_time'] }}"
+                                                                data-guide-end-time="{{ $record['end_time'] }}"
+                                                                data-guide-comment="{{ $record['guide_comment'] ?? '' }}"
+                                                                data-tour-date="{{ $record['start_time'] }}">
                                                                 Edit
                                                             </button>
                                                         @else
                                                             N/A
-                                                        @endif
-                                                    </td>
-                                                    <td>
-                                                        @if($salary->guide_image)
-                                                            <img src="{{ asset('storage/' . $salary->guide_image) }}" alt="Guide Image" class="img-thumbnail" style="max-width: 100px;">
                                                         @endif
                                                     </td>
                                                 </tr>

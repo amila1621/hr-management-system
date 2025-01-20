@@ -11,6 +11,7 @@ use App\Models\TourGuide;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class GoogleCalendarController extends Controller
 {
@@ -18,8 +19,8 @@ class GoogleCalendarController extends Controller
     {
 
       // Define the time range
-$start = Carbon::parse('2025-01-05 16:37:13');
-$end = Carbon::parse('2025-01-05 16:39:13');
+$start = Carbon::parse('2025-01-13 17:00:24');
+$end = Carbon::parse('2025-01-13 17:10:24');
 
 // Restore records deleted within the time range
     EventSalary::onlyTrashed()
@@ -307,7 +308,7 @@ LocalEvent::whereBetween('updated_at', [$start, $end])
     {
         // Get the current month's start and end dates
         // $startOfMonth = Carbon::now()->startOfMonth();
-        $startOfMonth = Carbon::create(null, 11, 1)->startOfMonth();
+        $startOfMonth = Carbon::now()->startOfMonth();
         $endOfMonth = Carbon::now()->endOfMonth();
 
         // Get the last tour for each day
@@ -370,8 +371,9 @@ LocalEvent::whereBetween('updated_at', [$start, $end])
 
         $guides = TourGuide::all(); // Fetch all guides from the database
         $eventes = LocalEvent::orderBy('start_time','asc')->where('status',0)->get();
+        $updatedate =  DB::table('updatedate')
+        ->where('id', 1)->first();
 
-
-        return view('view-events', compact('eventes','guides'));
+        return view('view-events', compact('eventes','guides','updatedate'));
     }
 }

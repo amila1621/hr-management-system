@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Hash;
 use App\Models\Event;
 use App\Models\StaffUser;
 use Illuminate\Support\Facades\Storage;
-use App\Models\Announcement;
+use App\Models\SickLeave;
 use App\Models\Announcements;
 
 class TourGuideController extends Controller
@@ -260,18 +260,70 @@ class TourGuideController extends Controller
             ? \Carbon\Carbon::parse($request->input('end_date'))->endOfDay()
             : \Carbon\Carbon::now()->endOfMonth();
 
-        // Fetch event salaries for the selected guide within the specified date range
-        $eventSalaries = EventSalary::where('guideId', $tourGuide->id)
-            ->whereHas('event', function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('start_time', [$startDate, $endDate]);
-            })
-            ->with('event') // Eager load the event details
-            ->orderBy('guide_start_time', 'asc')
-            ->get();
+    // Get event salaries
+    $eventSalaries = EventSalary::where('guideId', $tourGuide->id)
+        ->whereHas('event', function ($query) use ($startDate, $endDate) {
+            $query->whereBetween('start_time', [$startDate, $endDate]);
+        })
+        ->with('event')
+        ->get()
+        ->map(function($salary) {
+            return [
+                'id' => $salary->id,
+                'type' => 'event',
+                'tour_name' => $salary->event->name,
+                'start_time' => $salary->guide_start_time,
+                'end_time' => $salary->guide_end_time,
+                'guide_times' => $salary->guide_times,
+                'normal_hours' => $salary->normal_hours,
+                'holiday_hours' => $salary->holiday_hours,
+                'normal_night_hours' => $salary->normal_night_hours,
+                'holiday_night_hours' => $salary->holiday_night_hours,
+                'approval_status' => $salary->approval_status,
+                'approval_comment' => $salary->approval_comment,
+                'guide_comment' => $salary->guide_comment,
+                'is_chore' => $salary->is_chore,
+                'is_guide_updated' => $salary->is_guide_updated
+            ];
+        });
 
-        // Pass the guide, event salaries, and date range to the view
-        return view('guides.guide-wise-report', compact('tourGuide', 'eventSalaries', 'startDate', 'endDate', 'displayAnnouncement','latestAnnouncement'));
-    }
+    // Get sick leaves
+    $sickLeaves = SickLeave::where('guide_id', $tourGuide->id)
+        ->whereBetween('date', [$startDate, $endDate])
+        ->get()
+        ->map(function($leave) {
+            return [
+                'id' => $leave->id,
+                'type' => 'sick_leave',
+                'tour_name' => $leave->tour_name,
+                'date' => $leave->date,
+                'start_time' => $leave->start_time,
+                'end_time' => $leave->end_time,
+                'normal_hours' => $leave->normal_hours,
+                'holiday_hours' => $leave->holiday_hours,
+                'normal_night_hours' => $leave->normal_night_hours,
+                'holiday_night_hours' => $leave->holiday_night_hours
+            ];
+        });
+
+    // Combine and sort collections
+    $combinedData = $eventSalaries->concat($sickLeaves)
+        ->sortBy(function($record) {
+            return $record['type'] == 'event' 
+                ? Carbon::parse($record['start_time'])->timestamp 
+                : Carbon::parse($record['date'])->timestamp;
+        })
+        ->values();
+
+
+    return view('guides.guide-wise-report', compact(
+        'tourGuide', 
+        'startDate', 
+        'endDate', 
+        'combinedData',
+        'displayAnnouncement',
+        'latestAnnouncement'
+    ));}
 
     public function reportHours()
     {
