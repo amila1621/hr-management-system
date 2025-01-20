@@ -259,5 +259,6 @@ Route::get('/fix-storage-link', function () {
 Route::post('/calculate-pickup-duration', [SalaryController::class, 'calculatePickupDuration'])->name('calculate.pickup.duration');
 });
 
+//testing pipeline.
 require __DIR__ . '/auth.php';
 
