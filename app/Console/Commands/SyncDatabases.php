@@ -13,10 +13,10 @@ class SyncDatabases extends Command
 
     public function handle()
     {
-        // Sync Events
+        // Sync Events first to ensure they exist
         $this->syncEvents();
         
-        // Sync Event Salaries
+        // Then sync Event Salaries
         $this->syncEventSalaries();
 
         $this->info('Database sync completed successfully!');
@@ -24,8 +24,8 @@ class SyncDatabases extends Command
 
     private function syncEvents()
     {
-        // Get all new or updated records
-        $records = Event::where('updated_at', '>', now()->subDay())->get();
+        // Get all records from January 1st, 2024
+        $records = Event::where('updated_at', '>=', '2024-12-31 00:00:00')->get();
 
         foreach ($records as $record) {
             // Convert the record to array and format datetime fields
@@ -58,11 +58,32 @@ class SyncDatabases extends Command
 
     private function syncEventSalaries()
     {
-        $records = DB::table('event_salaries')
-            ->where('updated_at', '>', now()->subDay())
-            ->get();
+        $records = DB::table('event_salaries')->where('updated_at', '>=', '2024-12-31 00:00:00')->get();
 
         foreach ($records as $record) {
+            // First, ensure the related event exists in secondary database
+            $eventExists = DB::connection('secondary')
+                ->table('events')
+                ->where('id', $record->eventId)
+                ->exists();
+
+            if (!$eventExists) {
+                // Fetch and sync the related event first
+                $event = Event::find($record->eventId);
+                if ($event) {
+                    $eventData = $event->toArray();
+                    $eventData['created_at'] = $event->created_at->format('Y-m-d H:i:s');
+                    $eventData['updated_at'] = $event->updated_at->format('Y-m-d H:i:s');
+                    
+                    DB::connection('secondary')
+                        ->table('events')
+                        ->insert($eventData);
+                } else {
+                    $this->warn("Skipping salary record {$record->id}: Related event {$record->eventId} not found");
+                    continue;
+                }
+            }
+
             // Convert the record to array and format datetime fields
             $data = (array) $record;
             $data['created_at'] = date('Y-m-d H:i:s', strtotime($record->created_at));
