@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\ChatGPTController;
 use App\Http\Controllers\ClaudeAIController;
@@ -31,7 +32,7 @@ use Illuminate\Support\Facades\File;
 |
 */
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth','activity'])->group(function () {
     Route::post('/updatedate', [TourDurationController::class, 'updatedate'])->name('updatedate');
     Route::post('/updatedateForBusDrivers', [TourDurationController::class, 'updatedateForBusDrivers'])->name('updatedateForBusDrivers');
     Route::get('/fixxx', [GoogleCalendarController::class, 'fixxx'])->name('fixxx');
@@ -89,7 +90,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/get-monthly-reports-op', [ReportController::class, 'getMonthlyReportOp'])->name('reports.getMonthlyReportOp');
     Route::get('/monthly-report-create-op', [ReportController::class, 'monthlyReportCreateOp'])->name('reports.monthly-report-create-op');
     Route::get('/guide-wise-reports', [ReportController::class, 'guideWiseReportCreate'])->name('reports.guide-wise-report-create');
-    Route::get('/get-guide-wise-reports', [ReportController::class, 'getGuideWiseReport'])->name('reports.getGuideWiseReport');
     Route::get('/guide/{guideId}/report', [ReportController::class, 'getGuideWiseReportByMonth'])->name('guide.report-by-month');
     Route::get('/manually-added-entries', [ReportController::class, 'ManualEntries'])->name('reports.manually-added-entries-create');
     Route::get('/manually-added-tours', [ReportController::class, 'ManualTours'])->name('reports.manually-added-tours-create');
@@ -211,20 +211,26 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/create-sheet', [OperationsController::class, 'createSheet'])->name('operations.create-sheet');
         Route::get('/check-sheet', [OperationsController::class, 'checkSheet'])->name('operation.checkin-sheet');
     });
-});
 
 Route::get('/salary-updates', [SalaryUpdatedController::class, 'index'])->name('salary-updates.index');
 Route::post('/salary-updates', [SalaryUpdatedController::class, 'store'])->name('salary-updates.store');
 Route::put('/salary-updates/{id}', [SalaryUpdatedController::class, 'update'])->name('salary-updates.update');
 Route::delete('/salary-updates/{id}', [SalaryUpdatedController::class, 'destroy'])->name('salary-updates.destroy');
 
-Route::get('/receipts-create', [ReceiptController::class, 'create'])->name('receipts.create');
 Route::get('/receipts-manage', [ReceiptController::class, 'manage'])->name('receipts.manage');
 Route::get('/receipts-approve', [ReceiptController::class, 'approve'])->name('receipts.approve');
 Route::post('/receipts', [ReceiptController::class, 'store'])->name('receipts.store');
 Route::delete('/receipts/{receipt}', [ReceiptController::class, 'destroy'])->name('receipts.destroy');
 Route::patch('/receipts/{receipt}/status', [ReceiptController::class, 'updateStatus'])->name('receipts.update-status');
 
+// Activity log routes
+
+    Route::get('/get-guide-wise-reports', [ReportController::class, 'getGuideWiseReport'])->name('reports.getGuideWiseReport');
+   
+    Route::get('/receipts-create', [ReceiptController::class, 'create'])->name('receipts.create');
+
+
+Route::resource('activity-log', ActivityLogController::class);
 
 Route::get('/fetch-last-tours', [GoogleCalendarController::class, 'saveLastTour'])->name('fetch.last-tours');
 
@@ -244,6 +250,7 @@ Route::get('/fix-storage-link', function () {
 })->name('fix-storage-link');
 
 Route::post('/calculate-pickup-duration', [SalaryController::class, 'calculatePickupDuration'])->name('calculate.pickup.duration');
+});
 
 require __DIR__ . '/auth.php';
 
