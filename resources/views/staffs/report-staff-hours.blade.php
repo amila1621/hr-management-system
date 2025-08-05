@@ -128,20 +128,27 @@
             </div>
             @endif
 
-            <!-- Week Navigation (same as original) -->
-            <div class="row">
-                <div class="col-md-12 mb-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="btn-group">
-                            <a href="{{ route(Route::currentRouteName(), ['week' => Carbon\Carbon::parse($selectedDate)->subWeek()->format('Y-m-d')]) }}"
-                                class="btn btn-outline-primary">
-                                <i class="fas fa-chevron-left"></i> Previous Week
-                            </a>
-                            <a href="{{ route(Route::currentRouteName(), ['week' => Carbon\Carbon::parse($selectedDate)->addWeek()->format('Y-m-d')]) }}"
-                                class="btn btn-outline-primary">
-                                Next Week <i class="fas fa-chevron-right"></i>
-                            </a>
-                        </div>
+            <!-- Week Navigation -->
+            <div class="day-selector">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <a href="{{ route(Route::currentRouteName(), ['week' => Carbon\Carbon::parse($selectedDate)->subWeek()->format('Y-m-d')]) }}" class="btn btn-light btn-sm">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </div>
+                    <div class="col text-center">
+                        <h5 class="mb-0">
+                            {{ Carbon\Carbon::parse($selectedDate)->startOfWeek()->format('d M') }} - 
+                            {{ Carbon\Carbon::parse($selectedDate)->endOfWeek()->format('d M, Y') }}
+                        </h5>
+                    </div>
+                    <div class="col-auto">
+                        <a href="{{ route(Route::currentRouteName(), ['week' => Carbon\Carbon::parse($selectedDate)->addWeek()->format('Y-m-d')]) }}" class="btn btn-light btn-sm">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
                         <div id="weekRange" class="text-center">
                             <strong>Week: {{ Carbon\Carbon::parse($selectedDate)->startOfWeek()->format('d M Y') }} -
                                 {{ Carbon\Carbon::parse($selectedDate)->endOfWeek()->format('d M Y') }}</strong>

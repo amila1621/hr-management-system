@@ -311,7 +311,13 @@ class SupervisorController extends Controller
         $allStaffFlattened = collect($staffByDepartment)->flatten();
 
 
-        return view('supervisor.enter-working-hours', compact(
+        // Check if mobile device or force mobile view
+        $isMobile = session('is_mobile', false) || $request->has('mobile');
+        
+        // Choose view based on device type
+        $viewName = $isMobile ? 'staffs.mobile.report-staff-hours' : 'supervisor.enter-working-hours';
+        
+        return view($viewName, compact(
             'selectedDate',
             'dates',
             'staffByDepartment',
