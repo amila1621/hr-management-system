@@ -1,3 +1,5 @@
+
+
 <?php $__env->startSection('content'); ?>
     <div class="content-page">
         <div class="content">
@@ -41,10 +43,11 @@
                                     <?php echo csrf_field(); ?>
                                     <div class="form-group">
                                         <label for="month">Month and Year</label>
-                                        <input type="month" value="<?php echo e(date('Y-m')); ?>" name="month" class="form-control" required>
+                                        <input type="month" value="<?php echo e(date('Y-m')); ?>" name="month" class="form-control" required onclick="this.showPicker()">
                                     </div>
                                     
                                     <button type="submit" class="btn btn-primary waves-effect waves-light">Fetch</button>
+                                    <button type="button" onclick="fetchLastMonth()" class="btn btn-secondary waves-effect waves-light ml-2">Fetch Last Month</button>
                                 </form>
                             </div>
                         </div>
@@ -53,6 +56,16 @@
             </div>
         </div>
     </div>
+
+    <script>
+    function fetchLastMonth() {
+        const monthInput = document.querySelector('input[type="month"]');
+        const currentDate = new Date(monthInput.value);
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        monthInput.value = currentDate.toISOString().slice(0, 7);
+        monthInput.form.submit();
+    }
+    </script>
 <?php $__env->stopSection(); ?>
 
 <?php echo $__env->make('partials.main', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /home/nordpzbm/hr.nordictravels.tech/resources/views/reports/monthly-report-create.blade.php ENDPATH**/ ?>

@@ -11,5 +11,6 @@ class OperationsProcessTours extends Model
 
     protected $table = 'operations_process_tours';
 
-    protected $fillable = ['event_id', 'tour_name', 'tour_date', 'description', 'original_description', 'status'];
+    protected $fillable = ['event_id', 'tour_name', 'tour_date', 'description', 'original_description', 'status', 'day_night', 'is_duration_updated', 'is_edited']; 
+  
 }

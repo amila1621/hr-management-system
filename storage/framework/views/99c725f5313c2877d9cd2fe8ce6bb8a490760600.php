@@ -1,3 +1,4 @@
+
 <!-- SweetAlert2 CSS -->
 <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 
@@ -48,12 +49,6 @@
         /* Sidebar adjustments */
         .left.side-menu {
             overflow: visible !important;
-        }
-
-        .slimscroll-menu {
-            overflow-y: auto !important;
-            height: calc(100vh - 60px) !important;
-            position: fixed;
         }
 
         /* Card and modal adjustments */
@@ -148,7 +143,7 @@
             font-weight: 600;
         }
 
-        #aiCalculationModal .modal-body {
+        #aiCalculationModal {
             max-height: 90vh;
             overflow-y: auto;
         }
@@ -169,6 +164,37 @@
             flex: 1;
             min-height: 400px; /* Minimum height fallback */
         }
+
+        .modal-open {
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+        }
+
+        /* Webkit browsers */
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #666666;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888888;
+            border-radius: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555555;
+        }
+
+        /* Firefox */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #888888 #666666;
+        }
     </style>
     <div class="content-page">
         <!-- Start content -->
@@ -178,7 +204,7 @@
                 <div class="page-title-box">
 
                     <div class="row align-items-center ">
-                        <div class="col-md-8">
+                        <div class="col-md-6">
                             <div class="page-title-box">
                                 <h4 class="page-title">Manage Events</h4>
                                 <ol class="breadcrumb">
@@ -192,8 +218,31 @@
                                 </ol>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <a class="btn btn-primary w-100" href="<?php echo e(route('calculate-all')); ?>">Calculate All</a>
+                        <div class="col-md-6">
+                            <?php if(Auth::user()->role == 'admin' || Auth::user()->role == 'hr-assistant'): ?>
+                        <form action="/updatedate" method="post">
+                            <?php echo csrf_field(); ?>
+                            <div style="margin-bottom: 10px;" class="row">
+                                <div class="col-6">
+                                    <p class="mb-0">Tour Hours - Update until <?php echo e(\Carbon\Carbon::parse($updatedate->date)->format('d/m/Y')); ?></p>
+                                    <?php if($updatedate->until_date_pending_approvals): ?>
+                                        <!--<div class="alert alert-warning">-->
+                                            <p class="">
+                                            Chores Hours - Update until  <?php echo e(\Carbon\Carbon::parse($updatedate->until_date_pending_approvals)->format('d/m/Y')); ?>
+
+                                            </p>
+                                        <!--</div>-->
+                                    <?php endif; ?>
+                                </div>
+                                <div class="col-4">
+                                    <input type="text" value="" class="form-control flatpickr" name="date" placeholder="Select Date...">
+                                </div>
+                                <div class="col-2">
+                                    <button class="btn btn-primary btn-sm" type="submit">Update</button>
+                                </div>
+                            </div>
+                        </form>
+                        <?php endif; ?>
                         </div>
 
                     </div>
@@ -530,7 +579,7 @@
 
                     <div class="row">
                         <!-- Left side - existing form -->
-                        <div class="col-md-6">
+                        <div class="col-md-6" style="max-height: 60vh; overflow-y: auto; overflow-x: hidden; padding-right: 15px;">
                             <form id="aiCalculationForm">
                                 <!-- Event Info Section -->
                                 <div class="card mb-3">
@@ -586,12 +635,19 @@
                         </div>
                         
                         <!-- Right side - event description -->
-                        <div class="col-md-6">
+                        <div class="col-md-6" style=
+                            "height: 60vh;
+                            overflow-y: auto;
+                            background-color: #2b3547;
+                            padding: 25px;
+                            display: flex;
+                            flex-direction: column;
+                            transition: all 0.3s ease;">
                             <div class="card h-100">
                                 <div class="card-header">
                                     <h6 class="mb-0">Event Description</h6>
                                 </div>
-                                <div class="card-body" style="height: calc(100vh - 300px); overflow-y: auto;">
+                                <div class="card-body">
                                     <div id="eventDescription" style="white-space: pre-wrap;">
                                     </div>
                                 </div>
@@ -848,6 +904,25 @@
             calculatePickupDuration($(this).find('.pickup-location'));
         });
     });
+
+    $(document).ready(function() {
+        $('.card-body').on('scroll touchmove mousewheel', function(e) {
+            e.stopPropagation();
+        });
+
+        $('#aiCalculationModal').on('show.bs.modal', function() {
+            $('body').addClass('modal-open');
+        }).on('hidden.bs.modal', function() {
+            $('body').removeClass('modal-open');
+        });
+    });
+    flatpickr(".flatpickr", {
+            dateFormat: "Y-m-d",
+            theme: "dark",
+            allowInput: true,
+            altInput: true,
+            altFormat: "d/m/Y",
+        });
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
 <?php $__env->stopSection(); ?>

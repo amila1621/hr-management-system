@@ -1,3 +1,5 @@
+
+
 <?php
     if (!function_exists('formatTime')) {
         function formatTime($hours)
@@ -71,108 +73,123 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <?php $__currentLoopData = $eventSalaries; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $salary): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                                <tr>
+                                            <?php $__currentLoopData = $combinedData; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $record): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                <tr <?php if($record["type"] == "sick_leave"): ?> style="background-color:#806600;" <?php endif; ?>>
                                                     <td>
-                                                        <?php if($salary->guide_start_time): ?>
-                                                            <?php echo e(\Carbon\Carbon::parse($salary->guide_start_time)->format('d.m.Y')); ?>
+                                                        <?php echo e(\Carbon\Carbon::parse($record['date'])->format('d.m.Y')); ?>
 
-                                                        <?php elseif($salary->event->start_time): ?>
-                                                            <?php echo e(\Carbon\Carbon::parse($salary->event->start_time)->format('d.m.Y')); ?>
+                                                    </td>
+                                                    <td>
+                                                        <?php echo e($record['tour_name']); ?>
+
+                                                        <?php if($record['type'] == 'sick_leave'): ?>
+                                                            <span class="badge badge-info">Sick Leave</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td>
+                                                        <?php if($record['type'] == 'event'): ?>
+                                                        
+                                                        <?php if($record['guide_start_time']): ?>
+                                                        <?php echo e(\Carbon\Carbon::parse($record['guide_start_time'])->format('H:i')); ?> - 
+                                                        <?php echo e(\Carbon\Carbon::parse($record['guide_end_time'])->format('H:i')); ?>
+
+                                                            <?php else: ?>
+                                                                N/A
+                                                            <?php endif; ?>
+                                                        
+                                                          
+                                                        <?php else: ?>
+                                                            <?php echo e(\Carbon\Carbon::parse($record['start_time'])->format('H:i')); ?> - 
+                                                            <?php echo e(\Carbon\Carbon::parse($record['end_time'])->format('H:i')); ?>
+
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    
+                                                    <td><?php echo e(formatTime($record['normal_hours'])); ?></td>
+                                                    <td><?php echo e(formatTime($record['holiday_hours'])); ?></td>
+                                                    <td><?php echo e(formatTime($record['normal_night_hours'])); ?></td>
+                                                    <td><?php echo e(formatTime($record['holiday_night_hours'])); ?></td>
+                                                    
+                                                    <td>
+                                                        <?php if($record['type'] == 'event'): ?>
+                                                            <?php if($record['approval_status'] == 1): ?>
+                                                                <span class="badge badge-success">Approved</span>
+                                                            <?php elseif($record['approval_status'] == 2): ?>
+                                                                <span class="badge badge-secondary">Adjusted</span>
+                                                            <?php elseif($record['approval_status'] == 3): ?>
+                                                                <span class="badge badge-warning">Needs More Info</span>
+                                                            <?php elseif($record['approval_status'] == 4): ?>
+                                                                <span class="badge badge-danger">Rejected</span>
+                                                            <?php else: ?>
+                                                                <span class="badge badge-warning">Pending</span>
+                                                            <?php endif; ?>
+                                                        <?php else: ?>
+                                                            <span class="badge badge-success">Approved</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    
+                                                    <td>
+                                                        <?php if($record['type'] == 'event'): ?>
+                                                            <?php echo e($record['approval_comment'] ?? 'No comment'); ?>
 
                                                         <?php else: ?>
                                                             N/A
                                                         <?php endif; ?>
                                                     </td>
-                                                    <td><?php echo e($salary->event->name); ?></td>
-                                                    <td>
-                                                        <?php if($salary->guide_times): ?>
-                                                            <?php $__currentLoopData = json_decode($salary->guide_times, true) ?? []; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $time): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                                                <?php echo e(\Carbon\Carbon::parse($time['start'])->format('H:i')); ?> - 
-                                                                <?php echo e(\Carbon\Carbon::parse($time['end'])->format('H:i')); ?><br>
-                                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                                                        <?php else: ?>
-                                                            <?php if($salary->guide_start_time): ?>
-                                                                <?php echo e(\Carbon\Carbon::parse($salary->guide_start_time)->format('H:i')); ?> - 
-                                                                <?php echo e(\Carbon\Carbon::parse($salary->guide_end_time)->format('H:i')); ?>
-
-                                                            <?php else: ?>
-                                                                N/A
-                                                            <?php endif; ?>
-                                                        <?php endif; ?>
-                                                    </td>
-                                                    
-                                                    <?php if($salary->approval_status != 4): ?>
-                                                        
-                                                    <td><?php echo e(formatTime($salary->normal_hours)); ?></td>
-                                                    <td><?php echo e(formatTime($salary->holiday_hours)); ?></td>
-                                                    <td><?php echo e(formatTime($salary->normal_night_hours)); ?></td>
-                                                    <td><?php echo e(formatTime($salary->holiday_night_hours)); ?></td>
-                                                    <?php else: ?>
-                                                        <td>N/A</td>
-                                                        <td>N/A</td>
-                                                        <td>N/A</td>
-                                                        <td>N/A</td>
-                                                    <?php endif; ?>
-                                                    
-                                                   
-                                                    
                                                     
                                                     <td>
-                                                        <?php if($salary->is_chore == 0  && $salary->approval_status == 1): ?>
-                                                            <span class="badge badge-success">Approved</span>
-                                                        <?php elseif($salary->is_chore == 0 && $salary->approval_status == 0): ?>
-                                                            <span class="badge badge-warning">Pending</span>
-                                                        <?php elseif($salary->approval_status == 1): ?>
-                                                            <span class="badge badge-success">Approved</span>
-                                                        <?php elseif($salary->approval_status == 2): ?>
-                                                            <span class="badge badge-secondary">Adjusted</span>
-                                                        <?php elseif($salary->approval_status == 3): ?>
-                                                            <span class="badge badge-warning">Needs More Info</span>
-                                                        <?php elseif($salary->approval_status == 4): ?>
-                                                            <span class="badge badge-danger">Rejected</span>
-                                                        <?php else: ?>
-                                                            <span class="badge badge-warning">Pending</span>
-                                                        <?php endif; ?>
-                                                    </td>
-                                                    <td>
-                                                        <?php if($salary->approval_comment): ?>
-                                                            <?php echo e($salary->approval_comment); ?>
+                                                        <?php if($record['type'] == 'event'): ?>
+                                                            <?php echo e($record['guide_comment'] ?? 'No comment'); ?>
 
                                                         <?php else: ?>
-                                                            No comment
+                                                            N/A
                                                         <?php endif; ?>
                                                     </td>
+                                                    
                                                     <td>
-                                                        <?php if($salary->guide_comment): ?>
-                                                            <?php echo e($salary->guide_comment); ?>
-
-                                                        <?php else: ?>
-                                                            No comment
-                                                        <?php endif; ?>
-                                                    </td>
-                                                    <td>
-                                                        <?php if($salary->is_chore == 1 && $salary->is_guide_updated == 0 || $salary->approval_status == 3): ?>
+                                                        <?php if($record['type'] == 'event' && 
+                                                            ($record['is_chore'] == 1 && $record['is_guide_updated'] == 0 || 
+                                                            $record['approval_status'] == 3)): ?>
                                                             <button class="btn btn-primary btn-sm edit-hours-btn"
-                                                                data-event-salary-id="<?php echo e($salary->id); ?>"
-                                                                data-guide-start-time="<?php echo e($salary->guide_start_time ? \Carbon\Carbon::parse($salary->guide_start_time)->format('d.m.Y H:i') : ''); ?>"
-                                                                data-guide-end-time="<?php echo e($salary->guide_end_time ? \Carbon\Carbon::parse($salary->guide_end_time)->format('d.m.Y H:i') : ''); ?>"
-                                                                data-guide-comment="<?php echo e($salary->guide_comment); ?>"
-                                                                data-tour-date="<?php echo e(\Carbon\Carbon::parse($salary->event->start_time)->format('d.m.Y')); ?>">
+                                                                data-event-salary-id="<?php echo e($record['id']); ?>"
+                                                                data-guide-start-time="<?php echo e($record['start_time']); ?>"
+                                                                data-guide-end-time="<?php echo e($record['end_time']); ?>"
+                                                                data-guide-comment="<?php echo e($record['guide_comment'] ?? ''); ?>"
+                                                                data-tour-date="<?php echo e($record['start_time']); ?>">
                                                                 Edit
                                                             </button>
                                                         <?php else: ?>
                                                             N/A
                                                         <?php endif; ?>
                                                     </td>
-                                                    <td>
-                                                        <?php if($salary->guide_image): ?>
-                                                            <img src="<?php echo e(asset('storage/' . $salary->guide_image)); ?>" alt="Guide Image" class="img-thumbnail" style="max-width: 100px;">
-                                                        <?php endif; ?>
-                                                    </td>
                                                 </tr>
+
                                             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+
+                                            
                                         </tbody>
+
+                                        <?php
+                                            $today = \Carbon\Carbon::now();
+                                            $isLastDayOfMonth = $today->copy()->endOfMonth()->format('Y-m-d') === $today->format('Y-m-d');
+                                        ?>
+
+                                        <?php if($isLastDayOfMonth): ?>
+
+                                        <tfoot>
+                                            <tr class="font-weight-bold">
+                                                <td colspan="3">Total</td>
+                                                <td id="total-work-hours">0:00</td>
+                                                <td id="total-holiday-hours">0:00</td>
+                                                <td id="total-night-hours">0:00</td>
+                                                <td id="total-holiday-night-hours">0:00</td>
+                                                <?php if(auth()->user()->role === 'admin' || auth()->user()->role === 'hr-assistant'): ?>
+                                                    <td></td>
+                                                <?php endif; ?>
+                                            </tr>
+                                        </tfoot>
+
+                                        <?php endif; ?>
                                     </table>
                                 </div>
                             </div>
@@ -228,7 +245,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                        <button type="submit" class="btn btn-primary">Save changes</button>
+                        <button type="submit" id="btnSubmitUpdateHours" class="btn btn-primary">Save changes</button>
                     </div>
                 </form>
             </div>
@@ -305,8 +322,11 @@
                 
                 // If there are existing times, populate them
                 if (startTime && endTime) {
-                    $('.guide-start-time').first()[0]._flatpickr.setDate(startTime);
-                    $('.guide-end-time').first()[0]._flatpickr.setDate(endTime);
+                    // $('.guide-start-time').first()[0]._flatpickr.setDate(startTime);
+                    // $('.guide-end-time').first()[0]._flatpickr.setDate(endTime);
+
+                    $('.guide-start-time').first()[0]._flatpickr.setDate(new Date(startTime));
+                    $('.guide-end-time').first()[0]._flatpickr.setDate(new Date(endTime));
                 }
                 
                 $('#modal-guide-comment').val(guideComment);
@@ -319,6 +339,7 @@
             $('#updateHoursForm').on('submit', function(e) {
                 e.preventDefault(); // Prevent default form submission
 
+                $('#btnSubmitUpdateHours').prop('disabled', true);
                 const formData = new FormData(this);
                 const eventSalaryId = $('#modal-event-salary-id').val();
 
@@ -331,6 +352,7 @@
                     success: function(response) {
                         $('#editHoursModal').modal('hide');
                         location.reload();
+                        $('#btnSubmitUpdateHours').prop('disabled', false);
                     },
                     error: function(xhr) {
                         const errors = xhr.responseJSON.errors;
@@ -338,12 +360,61 @@
                         for (const field in errors) {
                             errorMessage += `${field}: ${errors[field].join(', ')}\n`;
                         }
+
+                        $('#btnSubmitUpdateHours').prop('disabled', false);
                         alert(errorMessage);
                     }
                 });
             });
         });
     </script>
+
+<script>
+function timeToMinutes(timeStr) {
+    if (!timeStr) return 0;
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return (hours * 60) + (minutes || 0);
+}
+
+function minutesToTimeString(totalMinutes) {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours}:${minutes.toString().padStart(2, '0')}`;
+}
+
+function calculateTotals() {
+    let totalWorkHours = 0;
+    let totalHolidayHours = 0;
+    let totalNightHours = 0;
+    let totalHolidayNightHours = 0;
+
+    // Sum only approved (1) and adjusted (2) rows
+    document.querySelectorAll('tbody tr').forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const statusBadge = row.querySelector('.badge');
+        
+        // Only include in totals if status is approved or adjusted
+        if (statusBadge && 
+            (statusBadge.classList.contains('badge-success') || // Approved
+             statusBadge.classList.contains('badge-secondary'))) { // Adjusted
+            
+            totalWorkHours += timeToMinutes(cells[3].textContent);
+            totalHolidayHours += timeToMinutes(cells[4].textContent);
+            totalNightHours += timeToMinutes(cells[5].textContent);
+            totalHolidayNightHours += timeToMinutes(cells[6].textContent);
+        }
+    });
+
+    // Update totals row with calculated values
+    document.getElementById('total-work-hours').textContent = minutesToTimeString(totalWorkHours);
+    document.getElementById('total-holiday-hours').textContent = minutesToTimeString(totalHolidayHours);
+    document.getElementById('total-night-hours').textContent = minutesToTimeString(totalNightHours);
+    document.getElementById('total-holiday-night-hours').textContent = minutesToTimeString(totalHolidayNightHours);
+}
+// Calculate totals when page loads
+document.addEventListener('DOMContentLoaded', calculateTotals);
+
+</script>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>

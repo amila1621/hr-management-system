@@ -96,7 +96,6 @@
                                         </select>
                                     </div>
 
-                                    
 
                                     <button type="submit" class="btn btn-primary waves-effect waves-light">Update</button>
                                 </form>

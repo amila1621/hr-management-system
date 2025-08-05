@@ -1,6 +1,79 @@
 @extends('partials.main')
 
 @section('content')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    /* Dark theme for Select2 */
+    .select2-container--default .select2-selection--multiple,
+    .select2-container--default .select2-selection--single {
+        background-color: #242d3e !important; /* Red background */
+        border: 1px solid #404e57;
+        color: #fff;
+        min-height: 38px;
+    }
+
+    .select2-container--default .select2-selection--multiple .select2-selection__choice {
+        background-color: #242d3e;
+        border: 1px solid #446c99;
+        color: #fff;
+    }
+
+    .select2-container--classic .select2-selection--multiple .select2-selection__choice {
+        background-color: #242d3e;
+    }
+    .select2-container--classic .select2-search--inline .select2-search__field {
+        background:  #375a7f;
+    }
+
+    .select2-container--default .select2-selection__choice__remove {
+        color: #fff;
+    }
+
+    .select2-container--classic .select2-selection--multiple {
+        background-color: #3f4f69;
+        border: 1px solid #3f4f69;
+    }
+
+    .select2-dropdown {
+        background-color: #404e57 !important; /* Red background */
+        border: 1px solid #404e57;
+    }
+
+    .select2-container--default .select2-search--dropdown .select2-search__field {
+        background-color: #404e57 !important; /* Red background */
+        border: 1px solid #404e57;
+        color: #fff;
+    }
+
+    .select2-container--default .select2-results__option {
+        color: #fff;
+    }
+
+    .select2-container--default .select2-results__option[aria-selected=true] {
+        background-color: #3f4f69;
+    }
+
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        background-color: #446c99;
+        color: #fff;
+    }
+
+    /* Added styles for better visibility */
+    .select2-container--default .select2-selection--multiple .select2-selection__rendered {
+        background-color: #404e57 !important; /* Red background */
+        color: #fff;
+    }
+
+    .select2-container--default .select2-selection--multiple .select2-selection__placeholder {
+        color: #fff;
+    }
+
+    /* Fix for multiple select height */
+    .select2-container--default .select2-selection--multiple .select2-selection__rendered {
+        padding: 4px 8px;
+    }
+</style>
+
     <div class="content-page">
         <div class="content">
             <div class="container-fluid">
@@ -68,7 +141,7 @@
                                             <small class="text-danger">{{ $message }}</small>
                                         @enderror
                                     </div>
-                                    <div class="form-group">
+                                    <!-- <div class="form-group">
                                         <label for="name">Supervisor</label>
                                         <select name="supervisor" class="form-control">
                                     
@@ -82,8 +155,23 @@
                                           
                                             
                                         </select>
-                                    </div>
+                                    </div> -->
 
+                                    <div class="form-group">
+                                        <label for="department">Department</label>
+                                        <select name="department" class="form-control">
+                                            @php
+                                            $departments = App\Models\Departments::orderBy('department')->pluck('department')->toArray();
+                
+                                            @endphp
+                                            @foreach($departments as $dept)
+                                                <option value="{{ $dept }}" 
+                                                    {{ old('department', $staffUser->department) == $dept ? 'selected' : '' }}>
+                                                    {{ $dept }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
 
                                     <div class="form-group">
                                         <label for="email">Email</label>
@@ -132,6 +220,8 @@
                                         <select name="is_intern" class="form-control">
                                             <option value="0" {{ old('is_intern', $staffUser->user->is_intern ?? 0) == 0 ? 'selected' : '' }}>No</option>
                                             <option value="1" {{ old('is_intern', $staffUser->user->is_intern ?? 0) == 1 ? 'selected' : '' }}>Yes</option>
+                                            <option value="2" {{ old('is_intern', $staffUser->user->is_intern ?? 0) == 2 ? 'selected' : '' }}>Yes with Housing Compensation</option>
+                                       
                                         </select>
                                         @error('is_intern')
                                             <small class="text-danger">{{ $message }}</small>
@@ -156,4 +246,31 @@
             </div>
         </div>
     </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('.select2').select2({
+                placeholder: "Select Supervisors",
+                allowClear: true,
+                theme: "classic",
+                width: '100%',
+                dropdownAutoWidth: true,
+                containerCssClass: 'select2-dark',
+                dropdownCssClass: 'select2-dark',
+                templateResult: formatOption,
+                templateSelection: formatOption
+            });
+            
+            function formatOption(option) {
+                if (!option.id) return option.text;
+                return $('<span style="color: #fff;">' + option.text + '</span>');
+            }
+        });
+    </script>
+
 @endsection
+
+
+

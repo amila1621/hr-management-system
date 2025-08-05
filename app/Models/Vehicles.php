@@ -12,4 +12,6 @@ class Vehicles extends Model
     protected $table = 'vehicles';
 
     protected $fillable = ['name', 'type', 'number', 'number_of_seats', 'number_of_baby_seats', 'status'];
+
+    
 }

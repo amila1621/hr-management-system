@@ -13,6 +13,7 @@ class StaffHoursDetails extends Model
         'date',
         'reception',
         'midnight_phone',
+        'department'
     ];
 
     protected $casts = [

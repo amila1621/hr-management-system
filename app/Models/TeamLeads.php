@@ -12,7 +12,7 @@ class TeamLeads extends Model
 
     protected $table = 'team_leads';
 
-    protected $fillable = ['name', 'email', 'phone_number', 'rate', 'color', 'user_id'];
+    protected $fillable = ['name', 'email', 'phone_number', 'rate', 'color', 'user_id','allow_report_hours', 'is_intern'];
 
     public function user()
     {

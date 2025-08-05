@@ -91,13 +91,13 @@ $startDate = Carbon::createFromFormat('Y-m-d', $currentweek)->startOfWeek();
                 <div class="mb-3">
                     <input type="text" id="searchInput" class="form-control" placeholder="Search by guide name...">
                 </div>
-                <form action="/reports/working-hours" method="post">
+                <form action="/reports/ranking-for-hours-bus-drivers" method="post">
                     @csrf
                     <div style="margin-bottom: 10px;" class="row">
                         <div class="col-4">
                             <select name="start_date" class="form-control">
-                                <option value="2024-10-14">2024-10-14 to 2025-01-26 - (Current Segment)</option>
-                                <option value="2024-07-01">2024-07-01 to 2024-10-13 - (Previous Segment)</option>
+                                <option value="2024-10-14">14/10/2024 to 16/02/2025 - (Previous Segment)</option>
+                                <option selected value="2025-02-17">17/02/2025 to 22/06/2025 - (Current Segment)</option>
                             </select>
                         </div>
                         <div class="col-2">
@@ -133,6 +133,10 @@ $startDate = Carbon::createFromFormat('Y-m-d', $currentweek)->startOfWeek();
                                 {{ $startDate->copy()->addWeeks(12)->format('d/m') }} to
                                 {{ $startDate->copy()->addWeeks(15)->subDay()->format('d/m') }}
                             </th>
+                            <th class="sortable" data-sort="number">6th 3 Week <br>
+                                {{ $startDate->copy()->addWeeks(15)->format('d/m') }} to
+                                {{ $startDate->copy()->addWeeks(18)->subDay()->format('d/m') }}
+                            </th>
 
                         </tr>
                     </thead>
@@ -164,6 +168,10 @@ $startDate = Carbon::createFromFormat('Y-m-d', $currentweek)->startOfWeek();
                             <td
                                 class="{{ ($guide->working_hours['period5_hours'] ?? 0) > 144 ? 'table-warning' : (($guide->working_hours['period5_hours'] ?? 0) > 120 ? '' : '') }}">
                                 {{ formatTime($guide->working_hours['period5_hours'] ?? 0) }}
+                            </td>
+                            <td
+                                class="{{ ($guide->working_hours['period6_hours'] ?? 0) > 144 ? 'table-warning' : (($guide->working_hours['period6_hours'] ?? 0) > 120 ? '' : '') }}">
+                                {{ formatTime($guide->working_hours['period6_hours'] ?? 0) }}
                             </td>
                         </tr>
                         @endforeach

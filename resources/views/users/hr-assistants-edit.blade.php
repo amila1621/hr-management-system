@@ -93,6 +93,8 @@
                                         <select name="is_intern" class="form-control" required>
                                             <option value="1" {{ $hrAssistant->user->is_intern ? 'selected' : '' }}>Yes</option>
                                             <option value="0" {{ !$hrAssistant->user->is_intern ? 'selected' : '' }}>No</option>
+                                            <option value="2" {{ !$hrAssistant->user->is_intern ? 'selected' : '' }}>Yes with Housing Compensation</option>
+                                            
                                         </select>
                                     </div>
 

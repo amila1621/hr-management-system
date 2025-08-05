@@ -23,7 +23,7 @@
                                             <label for="month">Select Period</label>
                                             <select name="period" id="period" class="form-control" required>
                                                 @php
-                                                    $startDate = \Carbon\Carbon::parse('2024-07-01');
+                                                    $startDate = \Carbon\Carbon::parse('2025-04-21');
                                                     $currentDate = \Carbon\Carbon::now();
                                                     
                                                     // Get the selected period from the request, or use current period as default
@@ -47,19 +47,41 @@
                                             </select>
                                         </div>
                                     </div>
-                                    <div class="col-md-3 offset-md-6">
-                                        <div class="form-group">
-                                            <label for="supervisor">Select Supervisor</label>
-                                            <select name="supervisor" id="supervisor" class="form-control">
-                                                <option value="" selected disabled>Select Supervisor</option>
-                                                @foreach($supervisors as $supervisor)
-                                                    <option value="{{ $supervisor->id }}" {{ request('supervisor') == $supervisor->id ? 'selected' : '' }}>
-                                                        {{ $supervisor->name }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                        </div>
+                                    @php
+                                    // Get current user's department
+                                    $currentUserDepartment = '';
+                                    if(Auth::user()->role == 'supervisor') {
+                                        $supervisor = App\Models\Supervisors::where('user_id', Auth::user()->id)->first();
+                                        $currentUserDepartment = $supervisor ? $supervisor->department : '';
+                                    } else {
+                                        $staffUser = App\Models\StaffUser::where('user_id', Auth::user()->id)->first();
+                                        $currentUserDepartment = $staffUser ? $staffUser->department : '';
+                                    }
+                                    
+                                    // Check if user belongs to HR department
+                                    $isHRUser = str_contains(strtolower($currentUserDepartment), 'hr');
+                                @endphp
+
+                                @if($isHRUser)
+                                <div class="col-md-3 offset-md-6">
+                                    <div class="form-group">
+                                        <label for="supervisor">Select Team</label>
+                                        <select name="supervisor" id="supervisor" class="form-control">
+                                            <option value="" selected disabled>Select Team</option>
+                                            @php
+                                            $departments = App\Models\Departments::orderBy('department')->pluck('department')->toArray();
+                                            @endphp
+                                            
+                                            @foreach($departments as $dept)
+                                                <option value="{{ $dept }}" 
+                                                    {{ request('supervisor') == $dept ? 'selected' : '' }}>
+                                                    {{ $dept }}
+                                                </option>
+                                            @endforeach
+                                        </select>
                                     </div>
+                                </div>
+                                @endif
                                 </div>
 
                                 <div class="table-responsive-container">
@@ -103,10 +125,34 @@
                                                             @endphp
                                                             <td class="{{ in_array($date->format('Y-m-d'), $holidays->toArray()) ? '' : '' }}">
                                                                 @foreach($timeValues as $timeValue)
-                                                                    @if(isset($timeValue['type']))
-                                                                        {{ $timeValue['type'] }}
-                                                                    @else
-                                                                        {{ $timeValue['start_time'] }}-{{ $timeValue['end_time'] }}<br>
+                                                                    @if(is_array($timeValue))
+                                                                        @if(isset($timeValue['type']) && in_array($timeValue['type'], ['V', 'X', 'H']))
+                                                                            <div>{{ $timeValue['type'] }}</div>
+                                                                        @elseif(isset($timeValue['start_time']) && isset($timeValue['end_time']))
+                                                                            @if(isset($timeValue['original_start_time']) && 
+                                                                                isset($timeValue['original_end_time']) && 
+                                                                                ($timeValue['original_start_time'] != $timeValue['start_time'] || 
+                                                                                $timeValue['original_end_time'] != $timeValue['end_time']))
+                                                                                <div class="original-time">
+                                                                                    <span class="strikethrough">{{ $timeValue['original_start_time'] }} - {{ $timeValue['original_end_time'] }}</span>
+                                                                                </div>
+                                                                            @endif
+                                                                            <div>
+                                                                                {{-- Display SL prefix if it's a sick leave entry --}}
+                                                                                {{ isset($timeValue['display_prefix']) ? $timeValue['display_prefix'] : '' }}{{ $timeValue['start_time'] }} - {{ $timeValue['end_time'] }}
+                                                                            </div>
+                                                                        @endif
+                                                                    @elseif(is_string($timeValue))
+                                                                        @if(in_array($timeValue, ['V', 'X', 'H']))
+                                                                            <div>{{ $timeValue }}</div>
+                                                                        @elseif(strpos($timeValue, '-') !== false)
+                                                                            @php
+                                                                                list($start, $end) = explode('-', $timeValue);
+                                                                            @endphp
+                                                                            <div>{{ $start }} - {{ $end }}</div>
+                                                                        @else
+                                                                            <div>{{ $timeValue }}</div>
+                                                                        @endif
                                                                     @endif
                                                                 @endforeach
                                                             </td>
@@ -204,6 +250,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
+    
     .content-page {
         display: flex;
         flex-direction: column;
@@ -295,5 +342,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     #timePlanTable thead th.holiday-column {
         background-color: #dc3545 !important;
+    }
+    #timePlanTable td span.sick-leave {
+        color: #ffc107;
+        font-weight: bold;
+    }
+    .original-time {
+        font-size: 0.75rem;
+        line-height: 1;
+        margin-bottom: 2px;
+        color: #dc3545;
+    }
+    .strikethrough {
+        text-decoration: line-through;
+        font-style: italic;
     }
 </style>

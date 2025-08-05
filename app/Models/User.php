@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
@@ -68,6 +69,69 @@ class User extends Authenticatable
     public function supervisor()
     {
         return $this->hasOne(Supervisors::class);
+    }
+
+    public function amSupervisor()
+    {
+        return $this->hasOne(AmSupervisors::class);
+    }
+
+    public function accesses()
+    {
+        return $this->hasMany(UserAccess::class);
+    }
+
+    public function hasAccess($accessType)
+    {
+        // Convert access type to snake_case for legacy compatibility
+        $snakeCaseType = Str::snake($accessType);
+        
+        return $this->accesses()
+            ->where(function($query) use ($accessType, $snakeCaseType) {
+                $query->where('access_type', $accessType)
+                    ->orWhere('access_type', $snakeCaseType);
+            })
+            ->where('has_access', 1)
+            ->exists();
+    }
+
+    public function hasAnyAccountingAccess()
+    {
+        // Get all active income/expense types
+        $types = AccountingIncomeExpenseType::where('active', true)
+            ->pluck('name')
+            ->map(function($name) {
+                return Str::snake($name);
+            })
+            ->toArray();
+
+        // If no types are defined yet, use legacy hardcoded types
+        if (empty($types)) {
+            $types = [
+                'apartment_rent',
+                'apartment_deposit',
+                'salary',
+                'bonus',
+                'reimbursements',
+                'car_mileage',
+                'others'
+            ];
+        }
+
+        return $this->accesses()
+            ->where('has_access', true)
+            ->whereIn('access_type', $types)
+            ->exists();
+    }
+
+    public function supervisorRecord()
+    {
+        return $this->hasOne(Supervisors::class, 'user_id');
+    }
+
+    public function staff()
+    {
+        return $this->hasOne(StaffUser::class, 'user_id');
     }
 }
 

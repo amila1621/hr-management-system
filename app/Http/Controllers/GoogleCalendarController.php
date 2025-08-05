@@ -18,45 +18,46 @@ class GoogleCalendarController extends Controller
     public function fixxx()
     {
 
-      // Define the time range
-$start = Carbon::parse('2025-01-13 17:00:24');
-$end = Carbon::parse('2025-01-13 17:10:24');
+        // Define the time range
+        $start = Carbon::parse('2025-01-13 17:00:24');
+        $end = Carbon::parse('2025-01-13 17:10:24');
 
-// Restore records deleted within the time range
-    EventSalary::onlyTrashed()
-    ->whereBetween('deleted_at', [$start, $end])
-    ->restore();
+        // Restore records deleted within the time range
+        EventSalary::onlyTrashed()
+            ->whereBetween('deleted_at', [$start, $end])
+            ->restore();
 
 
-    // Update status to 1 for matching records
-LocalEvent::whereBetween('updated_at', [$start, $end])
-->update(['status' => 1]);
+        // Update status to 1 for matching records
+        LocalEvent::whereBetween('updated_at', [$start, $end])
+            ->update(['status' => 1]);
     }
 
     public function dashboard()
     {
-        if(Auth::user()->role == "admin" || Auth::user()->role == "hr-assistant"){
-            $lastTours = LastTours::orderBy('start_time', 'desc')
-                ->take(35)
+        if (Auth::user()->role == "admin" || Auth::user()->role == "hr-assistant") {
+            $lastTours = LastTours::orderBy('tour_date', 'desc')
+                ->take(40)
                 ->get();
             return view('fetch-events', compact('lastTours'));
-        } 
-        
-        elseif (Auth::user()->role == "guide") {
+        } elseif (Auth::user()->role == "guide") {
             return redirect()->route('guide.work-report');
-        }
-         elseif (Auth::user()->role == "supervisor" || Auth::user()->role == "operation") {
-            return redirect()->route('guides.working-hours');
-        }
-         elseif (Auth::user()->role == "staff") {
+        } elseif (Auth::user()->role == "guide/staff") {
+            return redirect()->route('guide.work-report');
+        } elseif (Auth::user()->role == "supervisor" || Auth::user()->role == "operation") {
+            return redirect()->route('supervisors.working-hours');
+        } elseif (Auth::user()->role == "am-supervisor") {
+            return redirect()->route('am-supervisor.enter-working-hours');
+        } elseif (Auth::user()->role == "staff") {
             return redirect()->route('staff.schedule');
-        }
-         elseif (Auth::user()->role == "team-lead") {
+        } elseif (Auth::user()->role == "team-lead") {
             return redirect()->route('manager.guide-report');
-        } 
+        } elseif (Auth::user()->role == "hr") {
+            return redirect()->route('supervisor.manage-sick-leaves');
+        }
     }
 
-    
+
     public function fetchFilterEvents(Request $request)
     {
         $calendarId = env('GOOGLE_CALENDAR_ID');
@@ -95,7 +96,7 @@ LocalEvent::whereBetween('updated_at', [$start, $end])
                     break;
                 }
             }
-            
+
             if ($skipEvent) {
                 // If the event is marked for deletion (e.g., 'X' prefix), delete it from local database
                 LocalEvent::where('event_id', $googleEvent->id)->delete();
@@ -159,29 +160,29 @@ LocalEvent::whereBetween('updated_at', [$start, $end])
         // Delete local events that are no longer in Google Calendar
         LocalEvent::where(function ($query) use ($startDateTime, $adjustedEndDateTime) {
             $query->whereBetween('start_time', [$startDateTime, $adjustedEndDateTime])
-                  ->orWhereBetween('end_time', [$startDateTime, $adjustedEndDateTime])
-                  ->orWhere(function ($q) use ($startDateTime, $adjustedEndDateTime) {
-                      $q->where('start_time', '<=', $startDateTime)
+                ->orWhereBetween('end_time', [$startDateTime, $adjustedEndDateTime])
+                ->orWhere(function ($q) use ($startDateTime, $adjustedEndDateTime) {
+                    $q->where('start_time', '<=', $startDateTime)
                         ->where('end_time', '>=', $adjustedEndDateTime);
-                  });
+                });
         })->whereNotIn('event_id', $fetchedEventIds)
-        ->where('event_id', 'not like', 'manual%')  // Add this line to exclude manual events
-        ->delete();
+            ->where('event_id', 'not like', 'manual%')  // Add this line to exclude manual events
+            ->delete();
 
         // Fetch and filter local events based on the date range
         $eventes = LocalEvent::where(function ($query) use ($startDateTime, $endDateTime) {
             $query->whereBetween('start_time', [$startDateTime, $endDateTime])
-                  ->orWhereBetween('end_time', [$startDateTime, $endDateTime])
-                  ->orWhere(function ($q) use ($startDateTime, $endDateTime) {
-                      $q->where('start_time', '<=', $startDateTime)
+                ->orWhereBetween('end_time', [$startDateTime, $endDateTime])
+                ->orWhere(function ($q) use ($startDateTime, $endDateTime) {
+                    $q->where('start_time', '<=', $startDateTime)
                         ->where('end_time', '>=', $endDateTime);
-                  });
+                });
         })->get();
         $this->saveLastTour();
         return redirect()->back()->with('success', 'Google Calendar events updated successfully.');
     }
 
-    
+
     public function fetchFilterChores(Request $request)
     {
         $calendarId = env('GOOGLE_CALENDAR_ID');
@@ -204,6 +205,9 @@ LocalEvent::whereBetween('updated_at', [$start, $end])
         $fetchedEventIds = [];
 
         foreach ($googleEvents as $googleEvent) {
+            if($googleEvent->name == '' && $googleEvent->description == ''){
+                continue;
+              }
             $eventStartTime = $googleEvent->startDateTime ?? $googleEvent->startDate;
             $eventEndTime = $googleEvent->endDateTime ?? null;
 
@@ -214,7 +218,7 @@ LocalEvent::whereBetween('updated_at', [$start, $end])
 
             // Case-insensitive check to only allow events starting with Z
             $allowEvent = (stripos($googleEvent->name, $allowedPrefix . ' ') === 0);
-            
+
             if (!$allowEvent) {
                 continue;
             }
@@ -276,93 +280,36 @@ LocalEvent::whereBetween('updated_at', [$start, $end])
         // Delete local events that are no longer in Google Calendar
         LocalEvent::where(function ($query) use ($startDateTime, $adjustedEndDateTime) {
             $query->whereBetween('start_time', [$startDateTime, $adjustedEndDateTime])
-                  ->orWhereBetween('end_time', [$startDateTime, $adjustedEndDateTime])
-                  ->orWhere(function ($q) use ($startDateTime, $adjustedEndDateTime) {
-                      $q->where('start_time', '<=', $startDateTime)
+                ->orWhereBetween('end_time', [$startDateTime, $adjustedEndDateTime])
+                ->orWhere(function ($q) use ($startDateTime, $adjustedEndDateTime) {
+                    $q->where('start_time', '<=', $startDateTime)
                         ->where('end_time', '>=', $adjustedEndDateTime);
-                  });
+                });
         })->whereNotIn('event_id', $fetchedEventIds)
-        ->where('event_id', 'not like', 'manual%')  // Add this line to exclude manual events
-        ->where('name', 'like', 'Z%')
-        ->delete();
+            ->where('event_id', 'not like', 'manual%')  // Add this line to exclude manual events
+            ->where('name', 'like', 'Z%')
+            ->delete();
 
         // Fetch and filter local events based on the date range
         $eventes = LocalEvent::where(function ($query) use ($startDateTime, $endDateTime) {
             $query->whereBetween('start_time', [$startDateTime, $endDateTime])
-                  ->orWhereBetween('end_time', [$startDateTime, $endDateTime])
-                  ->orWhere(function ($q) use ($startDateTime, $endDateTime) {
-                      $q->where('start_time', '<=', $startDateTime)
+                ->orWhereBetween('end_time', [$startDateTime, $endDateTime])
+                ->orWhere(function ($q) use ($startDateTime, $endDateTime) {
+                    $q->where('start_time', '<=', $startDateTime)
                         ->where('end_time', '>=', $endDateTime);
-                  });
+                });
         })->get();
 
         $this->saveLastTour();
         return redirect()->back()->with('success', 'Google Calendar events updated successfully.');
     }
 
-
-
-
-
     public function saveLastTour()
     {
-        // Get the current month's start and end dates
-        // $startOfMonth = Carbon::now()->startOfMonth();
-        $startOfMonth = Carbon::now()->startOfMonth();
-        $endOfMonth = Carbon::now()->endOfMonth();
-
-        // Get the last tour for each day
-        $dailyLastTours = LocalEvent::with(['eventSalary' => function($query) {
-            $query->where('is_chore', 0)
-                  ->orderBy('guide_end_time', 'desc');
-        }])
-        ->whereBetween('start_time', [$startOfMonth, $endOfMonth])
-        ->where('name', 'like', 'N%')
-        ->whereHas('eventSalary', function($query) {
-            $query->where('is_chore', 0);
-        })
-        ->get()
-        ->groupBy(function($event) {
-            return Carbon::parse($event->start_time)->format('Y-m-d');
-        })
-        ->map(function($dayEvents) {
-            // For each day's events, get the one with the latest guide_end_time
-            return $dayEvents->map(function($event) {
-                // Get the latest non-chore eventSalary for this event
-                return [
-                    'event' => $event,
-                    'eventSalary' => $event->eventSalary->first(), // Already ordered by guide_end_time desc
-                    'guide_end_time' => $event->eventSalary->first()->guide_end_time
-                ];
-            })
-            ->sortByDesc('guide_end_time')
-            ->first();
-        })
-        ->values();
-
-        // Delete existing last tours for the current month
-        LastTours::whereBetween('start_time', [$startOfMonth, $endOfMonth])->delete();
-
-        // Save new last tours
-        foreach ($dailyLastTours as $lastTour) {
-            LastTours::create([
-                'tour_name' => $lastTour['event']->name,
-                'tour_date' => Carbon::parse($lastTour['event']->start_time)->format('Y-m-d'),
-                'guide' => $lastTour['eventSalary']->tourGuide->name,
-                'eventId' => $lastTour['event']->id,
-                'start_time' => $lastTour['eventSalary']->guide_start_time,
-                'end_time' => $lastTour['eventSalary']->guide_end_time
-            ]);
-        }
+        $controller = new LastToursController();
+        $result = $controller->updateLastTours();
+        return response()->json($result);
     }
-    
-
-
-
-
-
-
-
 
 
     public function fetchAllEvents(Request $request)
@@ -370,10 +317,10 @@ LocalEvent::whereBetween('updated_at', [$start, $end])
 
 
         $guides = TourGuide::all(); // Fetch all guides from the database
-        $eventes = LocalEvent::orderBy('start_time','asc')->where('status',0)->get();
+        $eventes = LocalEvent::orderBy('start_time', 'asc')->where('status', 0)->get();
         $updatedate =  DB::table('updatedate')
-        ->where('id', 1)->first();
+            ->where('id', 1)->first();
 
-        return view('view-events', compact('eventes','guides','updatedate'));
+        return view('view-events', compact('eventes', 'guides', 'updatedate'));
     }
 }

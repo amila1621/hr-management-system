@@ -9,19 +9,27 @@
             <!-- LOGO -->
             <div class="topbar-left">
                 <a href="{{ route('dashboard') }}" class="logo">
-                    <h4 class="header-text" style="margin: 19px 0px 0px -60px;">NUT HR</h4>
+                    <span class="logo-light">
+                        <img src="{{ asset('assets/images/nutlogo.png') }}" alt="logo" height="40">
+                    </span>
                 </a>
             </div>
 
             <!-- Add this CSS in the head section or your stylesheet -->
             <style>
-                .header-text {
-                    margin: 19px 0px 0px -60px;
+             
+
+                .logo img {
+                    vertical-align: middle;
                 }
 
-                .header-text.hidden {
-                    display: none;
+                .logo-light {
+                    display: flex;
+                    align-items: center;
+                    padding: 10px;
                 }
+
+              
             </style>
 
             <nav class="navbar-custom">

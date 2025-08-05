@@ -19,6 +19,7 @@ class Supervisors extends Model
         'color',
         'display_midnight_phone',
         'user_id',
+        'department',
     ];
 
     public function user()

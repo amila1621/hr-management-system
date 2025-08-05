@@ -21,7 +21,7 @@
                                             <label for="month">Select Period</label>
                                             <select name="period" id="period" class="form-control" required>
                                                 <?php
-                                                    $startDate = \Carbon\Carbon::parse('2024-07-01');
+                                                    $startDate = \Carbon\Carbon::parse('2025-04-21');
                                                     $currentDate = \Carbon\Carbon::now();
                                                     
                                                     // Get the selected period from the request, or use current period as default
@@ -45,20 +45,42 @@
                                             </select>
                                         </div>
                                     </div>
-                                    <div class="col-md-3 offset-md-6">
-                                        <div class="form-group">
-                                            <label for="supervisor">Select Supervisor</label>
-                                            <select name="supervisor" id="supervisor" class="form-control">
-                                                <option value="" selected disabled>Select Supervisor</option>
-                                                <?php $__currentLoopData = $supervisors; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $supervisor): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                                    <option value="<?php echo e($supervisor->id); ?>" <?php echo e(request('supervisor') == $supervisor->id ? 'selected' : ''); ?>>
-                                                        <?php echo e($supervisor->name); ?>
+                                    <?php
+                                    // Get current user's department
+                                    $currentUserDepartment = '';
+                                    if(Auth::user()->role == 'supervisor') {
+                                        $supervisor = App\Models\Supervisors::where('user_id', Auth::user()->id)->first();
+                                        $currentUserDepartment = $supervisor ? $supervisor->department : '';
+                                    } else {
+                                        $staffUser = App\Models\StaffUser::where('user_id', Auth::user()->id)->first();
+                                        $currentUserDepartment = $staffUser ? $staffUser->department : '';
+                                    }
+                                    
+                                    // Check if user belongs to HR department
+                                    $isHRUser = str_contains(strtolower($currentUserDepartment), 'hr');
+                                ?>
 
-                                                    </option>
-                                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                                            </select>
-                                        </div>
+                                <?php if($isHRUser): ?>
+                                <div class="col-md-3 offset-md-6">
+                                    <div class="form-group">
+                                        <label for="supervisor">Select Team</label>
+                                        <select name="supervisor" id="supervisor" class="form-control">
+                                            <option value="" selected disabled>Select Team</option>
+                                            <?php
+                                            $departments = App\Models\Departments::orderBy('department')->pluck('department')->toArray();
+                                            ?>
+                                            
+                                            <?php $__currentLoopData = $departments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $dept): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                <option value="<?php echo e($dept); ?>" 
+                                                    <?php echo e(request('supervisor') == $dept ? 'selected' : ''); ?>>
+                                                    <?php echo e($dept); ?>
+
+                                                </option>
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                        </select>
                                     </div>
+                                </div>
+                                <?php endif; ?>
                                 </div>
 
                                 <div class="table-responsive-container">
@@ -103,11 +125,35 @@
                                                             ?>
                                                             <td class="<?php echo e(in_array($date->format('Y-m-d'), $holidays->toArray()) ? '' : ''); ?>">
                                                                 <?php $__currentLoopData = $timeValues; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $timeValue): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                                                    <?php if(isset($timeValue['type'])): ?>
-                                                                        <?php echo e($timeValue['type']); ?>
+                                                                    <?php if(is_array($timeValue)): ?>
+                                                                        <?php if(isset($timeValue['type']) && in_array($timeValue['type'], ['V', 'X', 'H'])): ?>
+                                                                            <div><?php echo e($timeValue['type']); ?></div>
+                                                                        <?php elseif(isset($timeValue['start_time']) && isset($timeValue['end_time'])): ?>
+                                                                            <?php if(isset($timeValue['original_start_time']) && 
+                                                                                isset($timeValue['original_end_time']) && 
+                                                                                ($timeValue['original_start_time'] != $timeValue['start_time'] || 
+                                                                                $timeValue['original_end_time'] != $timeValue['end_time'])): ?>
+                                                                                <div class="original-time">
+                                                                                    <span class="strikethrough"><?php echo e($timeValue['original_start_time']); ?> - <?php echo e($timeValue['original_end_time']); ?></span>
+                                                                                </div>
+                                                                            <?php endif; ?>
+                                                                            <div>
+                                                                                
+                                                                                <?php echo e(isset($timeValue['display_prefix']) ? $timeValue['display_prefix'] : ''); ?><?php echo e($timeValue['start_time']); ?> - <?php echo e($timeValue['end_time']); ?>
 
-                                                                    <?php else: ?>
-                                                                        <?php echo e($timeValue['start_time']); ?>-<?php echo e($timeValue['end_time']); ?><br>
+                                                                            </div>
+                                                                        <?php endif; ?>
+                                                                    <?php elseif(is_string($timeValue)): ?>
+                                                                        <?php if(in_array($timeValue, ['V', 'X', 'H'])): ?>
+                                                                            <div><?php echo e($timeValue); ?></div>
+                                                                        <?php elseif(strpos($timeValue, '-') !== false): ?>
+                                                                            <?php
+                                                                                list($start, $end) = explode('-', $timeValue);
+                                                                            ?>
+                                                                            <div><?php echo e($start); ?> - <?php echo e($end); ?></div>
+                                                                        <?php else: ?>
+                                                                            <div><?php echo e($timeValue); ?></div>
+                                                                        <?php endif; ?>
                                                                     <?php endif; ?>
                                                                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                                             </td>
@@ -206,6 +252,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
+    
     .content-page {
         display: flex;
         flex-direction: column;
@@ -297,6 +344,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     #timePlanTable thead th.holiday-column {
         background-color: #dc3545 !important;
+    }
+    #timePlanTable td span.sick-leave {
+        color: #ffc107;
+        font-weight: bold;
+    }
+    .original-time {
+        font-size: 0.75rem;
+        line-height: 1;
+        margin-bottom: 2px;
+        color: #dc3545;
+    }
+    .strikethrough {
+        text-decoration: line-through;
+        font-style: italic;
     }
 </style>
 

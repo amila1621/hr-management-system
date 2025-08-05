@@ -11,5 +11,5 @@ class OperationsDayTours extends Model
 
     protected $table = 'operation_day_tour';
 
-    protected $fillable = ['event_id', 'tour_date', 'duration', 'tour_name', 'vehicle', 'pickup_time', 'pickup_location', 'pax', 'guide', 'available', 'remark'];
+    protected $fillable = ['event_id', 'tour_date', 'duration', 'tour_name', 'vehicle', 'pickup_time', 'pickup_location', 'pax', 'guide', 'available', 'remark', 'day_night', 'is_duration_updated', 'is_edited'];
 }

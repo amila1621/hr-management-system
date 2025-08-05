@@ -14,6 +14,7 @@ use App\Models\Event;
 use App\Models\StaffUser;
 use Illuminate\Support\Facades\Storage;
 use App\Models\SickLeave;
+use App\Models\Departments;
 use App\Models\Announcements;
 
 class TourGuideController extends Controller
@@ -29,10 +30,44 @@ class TourGuideController extends Controller
         return view('tour_guides.index', compact('tourGuides'));
     }
 
+    public function makeGuideStaff(Request $request)
+    {
+
+        $guideId = $request->input('tour_guide_id');
+        $departmentId = $request->input('department_id');
+
+        $guide = TourGuide::findOrFail($guideId);
+        $department = Departments::findOrFail($departmentId)->department;
+
+
+
+        $staff = new StaffUser();
+        $staff->full_name = $guide->full_name; 
+        $staff->name = $guide->name; 
+        $staff->email = $guide->email; 
+        $staff->department = $department; 
+        $staff->phone_number = $guide->phone_number; 
+        $staff->rate = $guide->rate; 
+        $staff->user_id = $guide->user_id; 
+        $staff->color = "#".substr(md5(rand()), 0, 6);
+        $staff->allow_report_hours = $guide->allow_report_hours;
+
+        $staff->save();
+
+
+        $user = User::findOrFail($guide->user_id);
+        $user->role = 'guide/staff'; // Change the role to 'staff'
+        $user->save();
+
+        return redirect()->route('tour-guides.index')->with('success', 'Tour Guide has been made a Staff User successfully.');
+    
+    }
 
     public function staffIndex()
     {
-        $staffUsers = StaffUser::all();
+        $staffUsers = StaffUser::where('is_supervisor',0)->get();
+
+
         return view('tour_guides.staff-index', compact('staffUsers'));
     }
 
@@ -46,6 +81,12 @@ class TourGuideController extends Controller
     {
         $supervisors = User::where('role', 'supervisor')->get();
         return view('tour_guides.supervisors-index', compact('supervisors'));
+    }
+
+    public function amSupervisorsIndex()
+    {
+        $supervisors = User::where('role', 'supervisor')->get();
+        return view('tour_guides.am-supervisors-index', compact('supervisors'));
     }
 
     public function teamLeadsIndex()
@@ -219,8 +260,39 @@ class TourGuideController extends Controller
      */
     public function destroy(TourGuide $tourGuide)
     {
+        // Store the user_id before deleting the tour guide
+        $userId = $tourGuide->user_id;
+        
+        // Delete the tour guide record
         $tourGuide->delete();
+        
+        // Delete the associated user record if it exists
+        if ($userId) {
+            $user = User::find($userId);
+            if ($user) {
+                $user->delete();
+            }
+        }
+        
         return redirect()->route('tour-guides.index')->with('success', 'Tour Guide deleted successfully.');
+    }
+  
+  
+    public function Terminate(Request $request)
+    {
+        $tourGuide = TourGuide::findOrFail($request->id);
+        $userId = $tourGuide->user_id;
+
+        $userId = $tourGuide->user_id;
+        $user = User::find($userId);
+
+        if ($user) {
+            $user->password = Hash::make('shalin@123');
+            $user->save();
+        }
+
+        $tourGuide->delete();
+        return redirect()->route('tour-guides.index')->with('success', 'Tour Guide marked as terminated successfully.');
     }
 
 
@@ -271,10 +343,12 @@ class TourGuideController extends Controller
             return [
                 'id' => $salary->id,
                 'type' => 'event',
+                'date' => $salary->guide_start_time,
                 'tour_name' => $salary->event->name,
                 'start_time' => $salary->guide_start_time,
+                'guide_start_time' => $salary->guide_start_time,
                 'end_time' => $salary->guide_end_time,
-                'guide_times' => $salary->guide_times,
+                'guide_end_time' => $salary->guide_end_time,
                 'normal_hours' => $salary->normal_hours,
                 'holiday_hours' => $salary->holiday_hours,
                 'normal_night_hours' => $salary->normal_night_hours,

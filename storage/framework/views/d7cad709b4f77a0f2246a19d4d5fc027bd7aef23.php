@@ -93,10 +93,11 @@ unset($__errorArgs, $__bag); ?>
                                             </option>
                                             <?php if(Auth::user()->role == 'admin'): ?>
                                                 <option value="supervisor" <?php echo e(old('role') == 'supervisor' ? 'selected' : ''); ?>> Supervisor</option>
-                                                <option value="operation" <?php echo e(old('role') == 'operation' ? 'selected' : ''); ?>>Operation</option>
                                                 <option value="admin" <?php echo e(old('role') == 'admin' ? 'selected' : ''); ?>>Admin</option>
-                                                <option value="team-lead" <?php echo e(old('role') == 'team-lead' ? 'selected' : ''); ?>>Team Lead</option>
-                                                <option value="hr-assistant" <?php echo e(old('role') == 'hr-assistant' ? 'selected' : ''); ?>>HR Assistant</option>
+                                                <option value="team-lead" <?php echo e(old('role') == 'team-lead' ? 'selected' : ''); ?>>Bus Driver Supervisor</option>
+                                                <option value="hr-assistant" <?php echo e(old('role') == 'hr-assistant' ? 'selected' : ''); ?>>Guide Supervisor</option>
+                                                <option value="am-supervisor" <?php echo e(old('role') == 'am-supervisor' ? 'selected' : ''); ?>>AM Supervisor</option>
+                                                <option value="hr" <?php echo e(old('role') == 'hr' ? 'selected' : ''); ?>>HR</option>
                                             <?php endif; ?>
 
                                         </select>
@@ -192,6 +193,43 @@ unset($__errorArgs, $__bag); ?>
 
                                     </div>
 
+                                    <!-- Add this new department field section -->
+                                    <div id="staff-department-field" style="display: none;">
+                                        <div class="form-group">
+                                            <label for="department">Department(s)</label>
+                                            <div class="department-checkbox-container">
+                                                <?php
+                                                    $departments = App\Models\Departments::orderBy('department')->pluck('department')->toArray();
+                
+                                                    // Convert old input to array if it exists
+                                                    $oldDepartments = is_array(old('departments')) ? old('departments') : 
+                                                        (old('departments') ? [old('departments')] : []);
+                                                ?>
+                                                
+                                                <?php $__currentLoopData = $departments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $dept): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                    <div class="custom-control custom-checkbox">
+                                                        <input type="checkbox" class="custom-control-input" 
+                                                               id="dept-<?php echo e(Str::slug($dept)); ?>" 
+                                                               name="departments[]" 
+                                                               value="<?php echo e($dept); ?>" 
+                                                               <?php echo e(in_array($dept, $oldDepartments) ? 'checked' : ''); ?>>
+                                                        <label class="custom-control-label" for="dept-<?php echo e(Str::slug($dept)); ?>"><?php echo e($dept); ?></label>
+                                                    </div>
+                                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                            </div>
+                                            <?php $__errorArgs = ['departments'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                                <small class="text-danger"><?php echo e($message); ?></small>
+                                            <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                        </div>
+                                    </div>
+
                                     <div class="form-group">
                                         <label for="email">Email</label>
                                         <input type="email" name="email" class="form-control"
@@ -243,6 +281,7 @@ unset($__errorArgs, $__bag); ?>
                                         <select name="is_intern" class="form-control">
                                             <option value="0" <?php echo e(old('is_intern') == '0' ? 'selected' : ''); ?>>No</option>
                                             <option value="1" <?php echo e(old('is_intern') == '1' ? 'selected' : ''); ?>>Yes</option>
+                                            <option value="2" <?php echo e(old('is_intern') == '2' ? 'selected' : ''); ?>>Yes with Housing Compensation</option>
                                         </select>
                                         <?php $__errorArgs = ['is_intern'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
@@ -290,6 +329,8 @@ endif;
 unset($__errorArgs, $__bag); ?>
                                     </div>
 
+                                
+
                                     <button type="submit" class="btn btn-primary waves-effect waves-light">Create</button>
                                 </form>
 
@@ -307,20 +348,31 @@ unset($__errorArgs, $__bag); ?>
     <script>
         $(document).ready(function() {
             function toggleGuideFields() {
-                if ($('#role-select').val() === 'guide' || $('#role-select').val() === 'staff') {
+                if ($('#role-select').val() === 'guide') {
                     $('#guide-fields').show();
+                    $('#staff-department-field').hide();
                     $('.supervisor-fields').hide();
-                } else if($('#role-select').val() === 'hr-assistant' || $('#role-select').val() === 'team-lead' || $('#role-select').val() === 'operation') {
+                } else if ($('#role-select').val() === 'staff') {
+                    $('#guide-fields').show();
+                    $('#staff-department-field').show();
+                    $('.supervisor-fields').hide();
+                    $('.not-hr-assistant-fields').show();
+                } else if($('#role-select').val() === 'hr-assistant' || $('#role-select').val() === 'team-lead') {
                     $('.hr-assistant-fields').show();
                     $('.not-hr-assistant-fields').hide();
                     $('.supervisor-fields').hide();
+                    $('#staff-department-field').hide();
                 } else if($('#role-select').val() === 'supervisor') {
                     $('.hr-assistant-fields').show();
                     $('.supervisor-fields').show();
+                    $('#staff-department-field').show();
                     $('.not-hr-assistant-fields').hide();
+                    $('[name="department"]').prop('required', true);
                 } else {
                     $('#guide-fields').hide();
+                    $('#staff-department-field').hide();
                     $('.supervisor-fields').hide();
+                    $('[name="department"]').prop('required', false);
                 }
             }
 
@@ -339,5 +391,7 @@ unset($__errorArgs, $__bag); ?>
         });
     </script>
 <?php $__env->stopSection(); ?>
+
+
 
 <?php echo $__env->make('partials.main', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /home/nordpzbm/hr.nordictravels.tech/resources/views/auth/new-user.blade.php ENDPATH**/ ?>

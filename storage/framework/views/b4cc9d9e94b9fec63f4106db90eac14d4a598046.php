@@ -1,3 +1,4 @@
+
   <!-- Add Flatpickr CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
@@ -71,10 +72,10 @@
                                                 <tr>
                                                     <td><a target="_blank" href="/get-guide-wise-reports?guide_id=<?php echo e($entry->guide_id); ?>&start_date=<?php echo e(\Carbon\Carbon::parse($entry->date)->format('Y-m-01')); ?>&end_date=<?php echo e(\Carbon\Carbon::parse($entry->date)->endOfMonth()->format('Y-m-d')); ?>"><?php echo e($entry->guide_name); ?></a></td>
                                                     <td><?php echo e(\Carbon\Carbon::parse($entry->date)->format('d M Y')); ?></td>
-                                                    <td><?php echo e($entry->normal_hours); ?></td>
-                                                    <td><?php echo e($entry->normal_night_hours); ?></td>
-                                                    <td><?php echo e($entry->holiday_hours); ?></td>
-                                                    <td><?php echo e($entry->holiday_night_hours); ?></td>
+                                                    <td><?php echo e(str_replace('.', ':', $entry->normal_hours)); ?></td>
+                                                    <td><?php echo e(str_replace('.', ':', $entry->normal_night_hours)); ?></td>
+                                                    <td><?php echo e(str_replace('.', ':', $entry->holiday_hours)); ?></td>
+                                                    <td><?php echo e(str_replace('.', ':', $entry->holiday_night_hours)); ?></td>
                                                     <td><?php echo e($entry->tour_name); ?></td>
                                                     <td><?php echo e(\Carbon\Carbon::parse($entry->applied_at)->format('M Y')); ?></td>
                                                     <td>
@@ -312,6 +313,10 @@ unset($__errorArgs, $__bag); ?>
         left: 240px; /* Adjust based on your sidebar width */
         z-index: 100;
         background: #fff;
+    }
+
+    .navbar-right {
+        margin-top: 15px;
     }
 </style>
 

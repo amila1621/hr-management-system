@@ -77,10 +77,11 @@
                                             </option>
                                             @if (Auth::user()->role == 'admin')
                                                 <option value="supervisor" {{ old('role') == 'supervisor' ? 'selected' : '' }}> Supervisor</option>
-                                                <option value="operation" {{ old('role') == 'operation' ? 'selected' : '' }}>Operation</option>
                                                 <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Admin</option>
-                                                <option value="team-lead" {{ old('role') == 'team-lead' ? 'selected' : '' }}>Team Lead</option>
-                                                <option value="hr-assistant" {{ old('role') == 'hr-assistant' ? 'selected' : '' }}>HR Assistant</option>
+                                                <option value="team-lead" {{ old('role') == 'team-lead' ? 'selected' : '' }}>Bus Driver Supervisor</option>
+                                                <option value="hr-assistant" {{ old('role') == 'hr-assistant' ? 'selected' : '' }}>Guide Supervisor</option>
+                                                <option value="am-supervisor" {{ old('role') == 'am-supervisor' ? 'selected' : '' }}>AM Supervisor</option>
+                                                <option value="hr" {{ old('role') == 'hr' ? 'selected' : '' }}>HR</option>
                                             @endif
 
                                         </select>
@@ -140,6 +141,36 @@
 
                                     </div>
 
+                                    <!-- Add this new department field section -->
+                                    <div id="staff-department-field" style="display: none;">
+                                        <div class="form-group">
+                                            <label for="department">Department(s)</label>
+                                            <div class="department-checkbox-container">
+                                                @php
+                                                    $departments = App\Models\Departments::orderBy('department')->pluck('department')->toArray();
+                
+                                                    // Convert old input to array if it exists
+                                                    $oldDepartments = is_array(old('departments')) ? old('departments') : 
+                                                        (old('departments') ? [old('departments')] : []);
+                                                @endphp
+                                                
+                                                @foreach($departments as $dept)
+                                                    <div class="custom-control custom-checkbox">
+                                                        <input type="checkbox" class="custom-control-input" 
+                                                               id="dept-{{ Str::slug($dept) }}" 
+                                                               name="departments[]" 
+                                                               value="{{ $dept }}" 
+                                                               {{ in_array($dept, $oldDepartments) ? 'checked' : '' }}>
+                                                        <label class="custom-control-label" for="dept-{{ Str::slug($dept) }}">{{ $dept }}</label>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                            @error('departments')
+                                                <small class="text-danger">{{ $message }}</small>
+                                            @enderror
+                                        </div>
+                                    </div>
+
                                     <div class="form-group">
                                         <label for="email">Email</label>
                                         <input type="email" name="email" class="form-control"
@@ -170,6 +201,7 @@
                                         <select name="is_intern" class="form-control">
                                             <option value="0" {{ old('is_intern') == '0' ? 'selected' : '' }}>No</option>
                                             <option value="1" {{ old('is_intern') == '1' ? 'selected' : '' }}>Yes</option>
+                                            <option value="2" {{ old('is_intern') == '2' ? 'selected' : '' }}>Yes with Housing Compensation</option>
                                         </select>
                                         @error('is_intern')
                                             <small class="text-danger">{{ $message }}</small>
@@ -196,6 +228,8 @@
                                         @enderror
                                     </div>
 
+                                
+
                                     <button type="submit" class="btn btn-primary waves-effect waves-light">Create</button>
                                 </form>
 
@@ -213,20 +247,31 @@
     <script>
         $(document).ready(function() {
             function toggleGuideFields() {
-                if ($('#role-select').val() === 'guide' || $('#role-select').val() === 'staff') {
+                if ($('#role-select').val() === 'guide') {
                     $('#guide-fields').show();
+                    $('#staff-department-field').hide();
                     $('.supervisor-fields').hide();
-                } else if($('#role-select').val() === 'hr-assistant' || $('#role-select').val() === 'team-lead' || $('#role-select').val() === 'operation') {
+                } else if ($('#role-select').val() === 'staff') {
+                    $('#guide-fields').show();
+                    $('#staff-department-field').show();
+                    $('.supervisor-fields').hide();
+                    $('.not-hr-assistant-fields').show();
+                } else if($('#role-select').val() === 'hr-assistant' || $('#role-select').val() === 'team-lead') {
                     $('.hr-assistant-fields').show();
                     $('.not-hr-assistant-fields').hide();
                     $('.supervisor-fields').hide();
+                    $('#staff-department-field').hide();
                 } else if($('#role-select').val() === 'supervisor') {
                     $('.hr-assistant-fields').show();
                     $('.supervisor-fields').show();
+                    $('#staff-department-field').show();
                     $('.not-hr-assistant-fields').hide();
+                    $('[name="department"]').prop('required', true);
                 } else {
                     $('#guide-fields').hide();
+                    $('#staff-department-field').hide();
                     $('.supervisor-fields').hide();
+                    $('[name="department"]').prop('required', false);
                 }
             }
 
@@ -245,3 +290,5 @@
         });
     </script>
 @endsection
+
+

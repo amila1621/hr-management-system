@@ -10,12 +10,12 @@
                     <div class="row align-items-center">
                         <div class="col-md-8">
                             <div class="page-title-box">
-                                <h4 class="page-title">Missing Hours</h4>
+                                <h4 class="page-title">Sick Leave Hours</h4>
                                 <ol class="breadcrumb">
                                     <li class="breadcrumb-item">
                                         <a href="javascript:void(0);">Home</a>
                                     </li>
-                                    <li class="breadcrumb-item active">Manage Missing Hours</li>
+                                    <li class="breadcrumb-item active">Manage Sick Leave Hours</li>
                                 </ol>
                             </div>
                         </div>
@@ -60,9 +60,6 @@
                                                 <th>Start Time</th>
                                                 <th>End Time</th>
                                                 <th>Normal Hours</th>
-                                                <th>Night Hours</th>
-                                                <th>Holiday Hours</th>
-                                                <th>Holiday Night Hours</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -72,13 +69,24 @@
                                                 <td>{{ $sickLeave->id }}</td>
                                                 <td>{{ $sickLeave->guide_name }}</td>
                                                 <td>{{ $sickLeave->tour_name }}</td>
-                                                <td>{{ $sickLeave->date->format('d/m/Y') }}</td>
-                                                <td>{{ $sickLeave->start_time }}</td>
-                                                <td>{{ $sickLeave->end_time }}</td>
-                                                <td>{{ $sickLeave->normal_hours }}</td>
-                                                <td>{{ $sickLeave->normal_night_hours }}</td>
-                                                <td>{{ $sickLeave->holiday_hours }}</td>
-                                                <td>{{ $sickLeave->holiday_night_hours }}</td>
+                                                <td>{{ $sickLeave->date->format('d.m.Y') }}</td>
+                                                <td>{{ $sickLeave->start_time->format('H:i') }}</td>
+                                                <td>{{ $sickLeave->end_time->format('H:i') }}</td>
+                                                <td>
+                                                    @php
+                                                        $parts = explode('.', $sickLeave->normal_hours);
+                                                        $hours = $parts[0];
+                                                        $minutes = isset($parts[1]) ? $parts[1] : '00';
+                                                        
+                                                        // Ensure minutes has at least 2 digits
+                                                        $minutes = str_pad(substr($minutes, 0, 2), 2, '0', STR_PAD_RIGHT);
+                                                        
+                                                        // Add leading zero to hours if needed
+                                                        $hours = str_pad($hours, 2, '0', STR_PAD_LEFT);
+                                                        
+                                                        echo $hours . ':' . $minutes;
+                                                    @endphp
+                                                </td>
                                                 <td>
                                                     <button class="btn btn-sm btn-primary edit-btn" 
                                                             data-id="{{ $sickLeave->id }}"
@@ -332,6 +340,15 @@ $(document).ready(function() {
         $('#edit_end_time').val(endTime.format('YYYY-MM-DD HH:mm'));
     });
 });
+</script>
+
+<script>
+    $(document).ready(function() {
+        $('#datatable').DataTable({
+            pageLength: 100,
+            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100    ]]
+        });
+    });
 </script>
 
 <style>

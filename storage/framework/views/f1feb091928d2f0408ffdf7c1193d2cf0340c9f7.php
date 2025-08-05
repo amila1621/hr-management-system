@@ -48,14 +48,13 @@
                                         </thead>
                                         <tbody>
                                             <?php $__currentLoopData = $eventSalaries; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $salary): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                                <?php if(Auth::user()->role == 'supervisor' || Auth::user()->role == 'operation'): ?>
-                                                    <?php if($salary['tourGuide']->supervisor == Auth::id()): ?>
+
+                                                    <?php if(isset($salary['tourGuide'])): ?>
                                                         <tr>
                                                             <td><?php echo e($salary['tourGuide']->name); ?></td>
-                                                            <td><?php echo e(sprintf("%02d:%02d", floor($salary['totalNormalHours']), fmod($salary['totalNormalHours'], 1) * 60)); ?></td>
-                                                             <td><?php echo e(sprintf("%02d:%02d", floor($salary['totalHolidayHours']), fmod($salary['totalHolidayHours'], 1) * 60)); ?></td>
+                                                            <td><?php echo e($salary['totalNormalHours']); ?></td>
+                                                            <td><?php echo e($salary['totalHolidayHours']); ?></td>
                                                         </tr>
-                                                    <?php endif; ?>
                                                 <?php endif; ?>
                                             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                         </tbody>

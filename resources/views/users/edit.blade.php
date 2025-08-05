@@ -91,8 +91,9 @@
                                     <div class="form-group">
                                         <label for="is_intern">Intern Status</label>
                                         <select name="is_intern" class="form-control" required>
-                                            <option value="1" {{ $user->is_intern ? 'selected' : '' }}>Yes</option>
-                                            <option value="0" {{ !$user->is_intern ? 'selected' : '' }}>No</option>
+                                            <option value="0" {{ $user->is_intern == 0 ? 'selected' : '' }}>No</option>
+                                            <option value="1" {{ $user->is_intern == 1 ? 'selected' : '' }}>Yes</option>
+                                            <option value="2" {{ $user->is_intern == 2 ? 'selected' : '' }}>Yes with Housing Compensation</option>
                                         </select>
                                     </div>
 

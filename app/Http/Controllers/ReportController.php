@@ -14,6 +14,11 @@ use App\Http\Controllers\SalaryController;
 use App\Models\Holiday;
 use App\Models\ManagerGuideAssignment;
 use App\Models\SalaryUpdated;
+use App\Models\StaffMissingHours; // Add this import for missing hours
+use App\Models\StaffUser;
+use App\Models\SupervisorSickLeaves;
+use App\Models\StaffMonthlyHours;
+use App\Models\Supervisors;
 
 class ReportController extends Controller
 {
@@ -25,7 +30,7 @@ class ReportController extends Controller
     public function monthlyReportCreateChristmas()
     {
         // Extract year and month from the request
-        $monthYear = '2024-12';
+        $monthYear = '2025-01';
         $date = \Carbon\Carbon::parse($monthYear);
 
         // Create the base query
@@ -406,10 +411,10 @@ class ReportController extends Controller
             // Calculate totals using the existing sumDecimalHours method
             return [
                 'guideId' => $salary->guideId,
-                'totalNormalHours' => $this->sumDecimalHours($normalHours),
-                'totalNormalNightHours' => $this->sumDecimalHours($normalNightHours),
-                'totalHolidayHours' => $this->sumDecimalHours($holidayHours),
-                'totalHolidayNightHours' => $this->sumDecimalHours($holidayNightHours),
+                'totalNormalHours' => str_replace('.', ':', $this->sumDecimalHours($normalHours)),
+                'totalNormalNightHours' => str_replace('.', ':', $this->sumDecimalHours($normalNightHours)),
+                'totalHolidayHours' => str_replace('.', ':', $this->sumDecimalHours($holidayHours)),
+                'totalHolidayNightHours' => str_replace('.', ':', $this->sumDecimalHours($holidayNightHours)),
                 'tourGuide' => $salary->tourGuide
             ];
         });
@@ -426,6 +431,28 @@ class ReportController extends Controller
         }
        
         return view('reports.guide-wise-report-create', compact('tourGuides'));
+    }
+
+    public function guideWiseReportCustomCreate()
+    {
+        if (Auth::user()->role=='admin' || Auth::user()->role=='team-lead' || Auth::user()->role=='hr-assistant') {
+            $tourGuides = TourGuide::orderBy('name', 'asc')->get();
+        }elseif(Auth::user()->role=='supervisor') {
+            $tourGuides = TourGuide::where('supervisor',Auth::id())->orderBy('name', 'asc')->get();
+        }
+       
+        return view('reports.guide-wise-report-custom-create', compact('tourGuides'));
+    }
+
+    public function terminatedGuideWiseReportCreate()
+    {
+        if (Auth::user()->role=='admin' || Auth::user()->role=='team-lead' || Auth::user()->role=='hr-assistant') {
+            $tourGuides = TourGuide::onlyTrashed()->orderBy('name', 'asc')->get();
+        }elseif(Auth::user()->role=='supervisor') {
+            $tourGuides = TourGuide::onlyTrashed()->where('supervisor',Auth::id())->orderBy('name', 'asc')->get();
+        }
+       
+        return view('reports.terminated-guide-wise-report-create', compact('tourGuides'));
     }
 
     public function ManualEntries()
@@ -507,10 +534,10 @@ class ReportController extends Controller
             // Calculate totals using the existing sumDecimalHours method
             return [
                 'guideId' => $salary->guideId,
-                'totalNormalHours' => $this->sumDecimalHours($normalHours),
-                'totalNormalNightHours' => $this->sumDecimalHours($normalNightHours),
-                'totalHolidayHours' => $this->sumDecimalHours($holidayHours),
-                'totalHolidayNightHours' => $this->sumDecimalHours($holidayNightHours),
+                'totalNormalHours' => str_replace('.', ':', $this->sumDecimalHours($normalHours)),
+                'totalNormalNightHours' => str_replace('.', ':', $this->sumDecimalHours($normalNightHours)),
+                'totalHolidayHours' => str_replace('.', ':', $this->sumDecimalHours($holidayHours)),
+                'totalHolidayNightHours' => str_replace('.', ':', $this->sumDecimalHours($holidayNightHours)),
                 'tourGuide' => $salary->tourGuide
             ];
         });
@@ -550,13 +577,94 @@ class ReportController extends Controller
                 return Carbon::parse($item->guide_start_time)->format('Y-m-d'); // Group by date
             });
 
-        // Pass the guide, event salaries, and date range to the view
         $tourGuide = TourGuide::find($guideId);
-        $tourGuides = TourGuide::where('is_hidden', false)->orderBy('name', 'asc')->get();
+
+        // Pass the guide, event salaries, and date range to the view
+        if(Auth::user()->role == 'team-lead'){
+            $assignedGuideIds = ManagerGuideAssignment::where('manager_id', auth()->id())->pluck('guide_id')->toArray();
+            $tourGuides = TourGuide::where('is_hidden', false)->whereIn('id', $assignedGuideIds)->orderBy('name', 'asc')->get();
+        } else {
+            $tourGuides = TourGuide::where('is_hidden', false)->orderBy('name', 'asc')->get();
+        }
 
         return view('reports.guide-wise-report', compact('tourGuide', 'tourGuides', 'eventSalaries', 'startDate', 'endDate'));
     }
+    
 
+    public function getGuideWiseCustomReport(Request $request)
+    {
+        // Validate input
+        $request->validate([
+            'guide_id' => 'required|exists:tour_guides,id',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+        ]);
+
+        // Fetch the selected guide
+        $guideId = $request->input('guide_id');
+        $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
+        $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
+
+        // Fetch event salaries for the selected guide within the specified date range
+        $eventSalaries = EventSalary::where('guideId', $guideId)
+            ->whereBetween('guide_start_time', [$startDate, $endDate])
+            ->whereIn('approval_status', [1, 2])
+            ->whereHas('event', function($query) {
+                $query->whereRaw("event_id NOT LIKE '%manual-missing-hours%'");
+            })
+            ->with('event')
+            ->orderBy('guide_start_time', 'asc') // Sort by date ascending
+            ->get()
+            ->groupBy(function($item) {
+                return Carbon::parse($item->guide_start_time)->format('Y-m-d'); // Group by date
+            });
+
+        $tourGuide = TourGuide::find($guideId);
+
+        // Pass the guide, event salaries, and date range to the view
+        if(Auth::user()->role == 'team-lead'){
+            $assignedGuideIds = ManagerGuideAssignment::where('manager_id', auth()->id())->pluck('guide_id')->toArray();
+            $tourGuides = TourGuide::where('is_hidden', false)->whereIn('id', $assignedGuideIds)->orderBy('name', 'asc')->get();
+        } else {
+            $tourGuides = TourGuide::where('is_hidden', false)->orderBy('name', 'asc')->get();
+        }
+
+        return view('reports.guide-wise-custom-report', compact('tourGuide', 'tourGuides', 'eventSalaries', 'startDate', 'endDate'));
+    }
+
+    public function getTerminatedGuideWiseReport(Request $request)
+    {
+        // Validate input
+        $request->validate([
+            'guide_id' => 'required|exists:tour_guides,id',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+        ]);
+
+        $guideId = $request->input('guide_id');
+        $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
+        $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
+
+        // Fetch event salaries (keep existing logic)
+        $eventSalaries = EventSalary::where('guideId', $guideId)
+            ->whereBetween('guide_start_time', [$startDate, $endDate])
+            ->whereIn('approval_status', [1, 2])
+            ->whereHas('event', function($query) {
+                $query->whereRaw("event_id NOT LIKE '%manual-missing-hours%'");
+            })
+            ->with('event')
+            ->orderBy('guide_start_time', 'asc')
+            ->get()
+            ->groupBy(function($item) {
+                return Carbon::parse($item->guide_start_time)->format('Y-m-d');
+            });
+
+        // Include trashed guides in queries
+        $tourGuide = TourGuide::withTrashed()->find($guideId);
+        $tourGuides = TourGuide::onlyTrashed()->orderBy('name', 'asc')->get();
+
+        return view('reports.terminated-guide-wise-report', compact('tourGuide', 'tourGuides', 'eventSalaries', 'startDate', 'endDate'));
+    }
     public function getGuideWiseReportByMonth(Request $request, $guideId)
     {
         // Validate input
@@ -603,9 +711,56 @@ class ReportController extends Controller
 
 
         // Fetch all guides for the modal
-        $tourGuides = TourGuide::orderBy('name','asc')->get();
+        if(Auth::user()->role == 'team-lead'){
+            $assignedGuideIds = ManagerGuideAssignment::where('manager_id', auth()->id())->pluck('guide_id')->toArray();
+            $tourGuides = TourGuide::where('is_hidden', false)->whereIn('id', $assignedGuideIds)->orderBy('name', 'asc')->get();
+        } else {
+            $tourGuides = TourGuide::where('is_hidden', false)->orderBy('name', 'asc')->get();
+        }
+
+        // $tourGuides = TourGuide::orderBy('name','asc')->get();
 
         return view('reports.guide-wise-report', compact('tourGuide', 'tourGuides', 'eventSalaries', 'year', 'month'));
+    }
+
+    
+    public function getTerminatedGuideWiseReportByMonth(Request $request, $guideId)
+    {
+        // Validate input
+        $request->validate([
+            'year' => 'required|integer|min:1900|max:2100',
+            'month' => 'required|integer|min:1|max:12',
+        ]);
+
+        $guideId = $request->input('guide_id');
+        $year = $request->input('year', date('Y'));
+        $month = $request->input('month', date('n'));
+
+        // Create date range for the selected month
+        $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+        $endDate = $startDate->copy()->endOfMonth();
+
+        // Fetch the selected guide
+        $tourGuide = TourGuide::withTrashed()->findOrFail($guideId);
+
+        // Keep existing EventSalary query
+        $eventSalaries = EventSalary::where('guideId', $guideId)
+            ->whereBetween('guide_start_time', [$startDate, $endDate])
+            ->whereIn('approval_status', [1, 2])
+            ->whereHas('event', function($query) {
+                $query->whereRaw("event_id NOT LIKE '%manual-missing-hours%'");
+            })
+            ->with('event')
+            ->orderBy('guide_start_time', 'asc')
+            ->get()
+            ->groupBy(function($item) {
+                return Carbon::parse($item->guide_start_time)->format('Y-m-d');
+            });
+
+        // Fetch all soft deleted guides for the modal
+        $tourGuides = TourGuide::onlyTrashed()->orderBy('name','asc')->get();
+
+        return view('reports.terminated-guide-wise-report', compact('tourGuide', 'tourGuides', 'eventSalaries', 'year', 'month'));
     }
 
     public function getGuideTimeReport(Request $request)
@@ -1006,6 +1161,7 @@ class ReportController extends Controller
             $secondShift->guide_end_time = $endDateTime;
             $this->calculateHours($secondShift);
            
+                         
             if($secondShift->normal_hours > 15 && Auth()->user()->role != 'admin'){
                 $secondShift->approval_status = 5; // Needs admin approval
             } else {
@@ -1427,12 +1583,12 @@ class ReportController extends Controller
      $guideWorkingHours = [];
 
      // Use the date from the request if available, otherwise use the given date
-     $currentweek = $request->input('start_date', '2024-10-14');
+     $currentweek = $request->input('start_date', '2025-02-17');
      
      $fixedStartDate = Carbon::createFromFormat('Y-m-d', $currentweek)->startOfWeek();
 
      // Loop through each of the 5 3-week periods
-     for ($period = 1; $period <= 5; $period++) {
+     for ($period = 1; $period <= 6; $period++) {
          // Define the start and end dates for the current 3-week period
          $startDate = $fixedStartDate->copy()->addWeeks(($period - 1) * 3);
          $endDate = $fixedStartDate->copy()->addWeeks($period * 3 - 1)->endOfWeek();
@@ -1507,7 +1663,7 @@ class ReportController extends Controller
         $guideWorkingHours = [];
 
         // Use the date from the request if available, otherwise use the given date
-        $currentweek = $request->input('start_date', '2024-10-14');
+        $currentweek = $request->input('start_date', '2025-06-23');
         
         $fixedStartDate = Carbon::createFromFormat('Y-m-d', $currentweek)->startOfWeek();
 
@@ -1567,11 +1723,328 @@ class ReportController extends Controller
         $updatedate =  DB::table('updatedate')
             ->where('id', 1)->first();
 
+
+        
+
         // Render the view and pass the required variables
         return view('reports.working-hours', compact('guides', 'updatedate', 'currentweek', 'earliestPendingDate'))
             ->with('dateFormat', 'd.m.Y');
     }
 
+
+    public function calculateWorkingHoursSupervisors(Request $request)
+{
+    // Set default start date to 2025-02-17
+    $currentweek = $request->input('start_date', '2025-06-23');
+    $startDate = Carbon::createFromFormat('Y-m-d', $currentweek)->startOfWeek();
+    
+    // Initialize periods array starting from currentweek
+    $periods = [];
+    for ($i = 0; $i < 6; $i++) {
+        $periodStart = $startDate->copy()->addWeeks($i * 3);
+        $periodEnd = $periodStart->copy()->addWeeks(3)->subDay();
+        $periods[$i + 1] = ['start' => $periodStart, 'end' => $periodEnd];
+    }
+
+    // Get supervisor's departments as array
+    $supervisor = Supervisors::where('user_id', auth()->id())->first();
+    $supervisorDepartments = explode(', ', $supervisor->department);
+
+    // Get staff that belong to any of the supervisor's departments
+    $staffIds = StaffUser::where(function($query) use ($supervisorDepartments) {
+        foreach ($supervisorDepartments as $department) {
+            // Use LIKE queries to find staff with this department
+            // This handles both exact matches and cases where the department is part of a list
+            $query->orWhere('department', 'LIKE', $department)
+                  ->orWhere('department', 'LIKE', $department . ',%')
+                  ->orWhere('department', 'LIKE', '%, ' . $department)
+                  ->orWhere('department', 'LIKE', '%, ' . $department . ',%');
+        }
+    })->pluck('id');
+
+    $staffWorkingHours = [];
+
+    foreach ($periods as $period => $dates) {
+        // Process regular hours from StaffMonthlyHours
+        $monthlyHours = StaffMonthlyHours::whereBetween('date', [$dates['start'], $dates['end']])
+            ->whereIn('staff_id', $staffIds)
+            ->get();
+
+        foreach ($monthlyHours as $record) {
+            try {
+                $hoursData = is_array($record->hours_data) 
+                    ? $record->hours_data 
+                    : json_decode($record->hours_data, true);
+
+                if (!is_array($hoursData)) {
+                    \Log::info('Invalid hours_data format for record: ' . $record->id);
+                    continue;
+                }
+
+                $dailyMinutes = 0;
+
+        foreach ($hoursData as $shift) {
+            // Skip ALL sick leaves regardless of status
+            if (isset($shift['type']) && $shift['type'] === 'SL') {
+                continue;
+            }
+            
+            // Only process shifts with valid start and end times
+            if (isset($shift['start_time']) && isset($shift['end_time']) && 
+                !is_null($shift['start_time']) && !is_null($shift['end_time'])) {
+                $startTime = Carbon::createFromFormat('H:i', $shift['start_time']);
+                $endTime = Carbon::createFromFormat('H:i', $shift['end_time']);
+                $dailyMinutes += $endTime->diffInMinutes($startTime);
+            }
+        }
+
+        // Convert total minutes to decimal hours (not the flawed format you were using)
+        $totalDecimalHours = $dailyMinutes / 60;
+
+        if (!isset($staffWorkingHours[$record->staff_id])) {
+            $staffWorkingHours[$record->staff_id] = [];
+        }
+
+        if (!isset($staffWorkingHours[$record->staff_id]["period{$period}_hours"])) {
+            $staffWorkingHours[$record->staff_id]["period{$period}_hours"] = 0;
+        }
+
+        $staffWorkingHours[$record->staff_id]["period{$period}_hours"] += $totalDecimalHours;
+
+            } catch (\Exception $e) {
+                \Log::error('Error processing record ' . $record->id . ': ' . $e->getMessage());
+                continue;
+            }
+        }
+        
+        // Process missing hours
+        $missingHours = StaffMissingHours::whereBetween('date', [$dates['start'], $dates['end']])
+            ->whereIn('staff_id', $staffIds)
+            ->get();
+            
+        foreach ($missingHours as $missing) {
+            try {
+                // Parse start and end times
+                if (strpos($missing->start_time, ':') !== false && strlen($missing->start_time) <= 5) {
+                    // Format is H:i
+                    $startTime = Carbon::createFromFormat('H:i', $missing->start_time);
+                    $endTime = Carbon::createFromFormat('H:i', $missing->end_time);
+                } else {
+                    // Full datetime format
+                    $startTime = Carbon::parse($missing->start_time);
+                    $endTime = Carbon::parse($missing->end_time);
+                }
+                
+                $missingMinutes = $endTime->diffInMinutes($startTime);
+                $missingHours = floor($missingMinutes / 60);
+                $missingRemainingMinutes = $missingMinutes % 60;
+                $missingHoursFormatted = sprintf('%d.%02d', $missingHours, $missingRemainingMinutes);
+                
+                if (!isset($staffWorkingHours[$missing->staff_id])) {
+                    $staffWorkingHours[$missing->staff_id] = [];
+                }
+                
+                if (!isset($staffWorkingHours[$missing->staff_id]["period{$period}_hours"])) {
+                    $staffWorkingHours[$missing->staff_id]["period{$period}_hours"] = 0;
+                }
+                
+                $staffWorkingHours[$missing->staff_id]["period{$period}_hours"] += (float)$missingHoursFormatted;
+                
+            } catch (\Exception $e) {
+                \Log::error('Error processing missing hours record ' . $missing->id . ': ' . $e->getMessage());
+                continue;
+            }
+        }
+    }
+
+    $assignedEmployees = StaffUser::whereIn('id', array_keys($staffWorkingHours))
+        ->get()
+        ->map(function ($employee) use ($staffWorkingHours) {
+            $employee->working_hours = $staffWorkingHours[$employee->id];
+            return $employee;
+        });
+
+    $assignedEmployees = $assignedEmployees->sortByDesc(function ($employee) {
+        return array_sum($employee->working_hours);
+    });
+
+    $updatedate = DB::table('updatedate')->where('id', 1)->first();
+    
+    return view('reports.working-hours-supervisors', compact('assignedEmployees', 'updatedate', 'startDate'))
+        ->with('dateFormat', 'd.m.Y');
+}
+
+
+    public function calculateWorkingHoursStaff(Request $request)
+{
+    // Set default start date to 2025-06-23
+    $currentweek = $request->input('start_date', '2025-06-23');
+    $startDate = Carbon::createFromFormat('Y-m-d', $currentweek)->startOfWeek();
+    
+    // Initialize periods array starting from currentweek
+    $periods = [];
+    for ($i = 0; $i < 6; $i++) {
+        $periodStart = $startDate->copy()->addWeeks($i * 3);
+        $periodEnd = $periodStart->copy()->addWeeks(3)->subDay();
+        $periods[$i + 1] = ['start' => $periodStart, 'end' => $periodEnd];
+    }
+
+    // Get all departments
+    $allDepartments = StaffUser::select('department')
+        ->whereNotNull('department')
+        ->where('department', '!=', '')
+        ->distinct()
+        ->pluck('department')
+        ->flatMap(function ($departments) {
+            // Split comma-separated departments and trim whitespace
+            return array_map('trim', explode(',', $departments));
+        })
+        ->unique()
+        ->filter()
+        ->sort()
+        ->values();
+
+    // Get all staff members
+    $allStaffIds = StaffUser::whereNotNull('department')
+        ->where('department', '!=', '')
+        ->pluck('id');
+
+    $staffWorkingHours = [];
+
+    foreach ($periods as $period => $dates) {
+        // Process regular hours from StaffMonthlyHours
+        $monthlyHours = StaffMonthlyHours::whereBetween('date', [$dates['start'], $dates['end']])
+            ->whereIn('staff_id', $allStaffIds)
+            ->get();
+
+        foreach ($monthlyHours as $record) {
+            try {
+                $hoursData = is_array($record->hours_data) 
+                    ? $record->hours_data 
+                    : json_decode($record->hours_data, true);
+
+                if (!is_array($hoursData)) {
+                    \Log::info('Invalid hours_data format for record: ' . $record->id);
+                    continue;
+                }
+
+                $dailyMinutes = 0;
+
+                foreach ($hoursData as $shift) {
+                    // Skip ALL sick leaves regardless of status
+                    if (isset($shift['type']) && $shift['type'] === 'SL') {
+                        continue;
+                    }
+                    
+                    // Only process shifts with valid start and end times
+                    if (isset($shift['start_time']) && isset($shift['end_time']) && 
+                        !is_null($shift['start_time']) && !is_null($shift['end_time'])) {
+                        $startTime = Carbon::createFromFormat('H:i', $shift['start_time']);
+                        $endTime = Carbon::createFromFormat('H:i', $shift['end_time']);
+                        $dailyMinutes += $endTime->diffInMinutes($startTime);
+                    }
+                }
+
+                // Convert total minutes to decimal hours
+                $totalDecimalHours = $dailyMinutes / 60;
+
+                if (!isset($staffWorkingHours[$record->staff_id])) {
+                    $staffWorkingHours[$record->staff_id] = [];
+                }
+
+                if (!isset($staffWorkingHours[$record->staff_id]["period{$period}_hours"])) {
+                    $staffWorkingHours[$record->staff_id]["period{$period}_hours"] = 0;
+                }
+
+                $staffWorkingHours[$record->staff_id]["period{$period}_hours"] += $totalDecimalHours;
+
+            } catch (\Exception $e) {
+                \Log::error('Error processing record ' . $record->id . ': ' . $e->getMessage());
+                continue;
+            }
+        }
+        
+        // Process missing hours
+        $missingHours = StaffMissingHours::whereBetween('date', [$dates['start'], $dates['end']])
+            ->whereIn('staff_id', $allStaffIds)
+            ->get();
+            
+        foreach ($missingHours as $missing) {
+            try {
+                // Parse start and end times
+                if (strpos($missing->start_time, ':') !== false && strlen($missing->start_time) <= 5) {
+                    // Format is H:i
+                    $startTime = Carbon::createFromFormat('H:i', $missing->start_time);
+                    $endTime = Carbon::createFromFormat('H:i', $missing->end_time);
+                } else {
+                    // Full datetime format
+                    $startTime = Carbon::parse($missing->start_time);
+                    $endTime = Carbon::parse($missing->end_time);
+                }
+                
+                $missingMinutes = $endTime->diffInMinutes($startTime);
+                $missingHours = floor($missingMinutes / 60);
+                $missingRemainingMinutes = $missingMinutes % 60;
+                $missingHoursFormatted = sprintf('%d.%02d', $missingHours, $missingRemainingMinutes);
+                
+                if (!isset($staffWorkingHours[$missing->staff_id])) {
+                    $staffWorkingHours[$missing->staff_id] = [];
+                }
+                
+                if (!isset($staffWorkingHours[$missing->staff_id]["period{$period}_hours"])) {
+                    $staffWorkingHours[$missing->staff_id]["period{$period}_hours"] = 0;
+                }
+                
+                $staffWorkingHours[$missing->staff_id]["period{$period}_hours"] += (float)$missingHoursFormatted;
+                
+            } catch (\Exception $e) {
+                \Log::error('Error processing missing hours record ' . $missing->id . ': ' . $e->getMessage());
+                continue;
+            }
+        }
+    }
+
+    // Get all staff members with their working hours and group by department
+    $allStaff = StaffUser::whereNotNull('department')
+        ->where('department', '!=', '')
+        ->get()
+        ->map(function ($employee) use ($staffWorkingHours) {
+            $employee->working_hours = $staffWorkingHours[$employee->id] ?? [];
+            
+            // Calculate total hours across all periods
+            $employee->total_hours = array_sum($employee->working_hours);
+            
+            return $employee;
+        });
+
+    // Group staff by department
+    $staffByDepartment = [];
+    
+    foreach ($allStaff as $staff) {
+        // Handle multiple departments (comma-separated)
+        $staffDepartments = array_map('trim', explode(',', $staff->department));
+        
+        foreach ($staffDepartments as $department) {
+            if (!isset($staffByDepartment[$department])) {
+                $staffByDepartment[$department] = collect();
+            }
+            $staffByDepartment[$department]->push($staff);
+        }
+    }
+
+    // Sort staff within each department by total hours (descending)
+    foreach ($staffByDepartment as $department => $staff) {
+        $staffByDepartment[$department] = $staff->sortByDesc('total_hours');
+    }
+
+    // Sort departments alphabetically
+    ksort($staffByDepartment);
+
+    $updatedate = DB::table('updatedate')->where('id', 1)->first();
+    
+    return view('reports.working-hours-staff-all', compact('staffByDepartment', 'allDepartments', 'updatedate', 'startDate'))
+        ->with('dateFormat', 'd.m.Y');
+}
 
     public function deleteWorkHours($id)
     {

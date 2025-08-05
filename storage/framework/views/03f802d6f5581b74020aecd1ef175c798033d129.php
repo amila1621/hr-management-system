@@ -1,3 +1,5 @@
+
+
 <?php $__env->startSection('content'); ?>
 
 <style>
@@ -428,5 +430,4 @@
 </script>
 
 <?php $__env->stopSection(); ?>
-
 <?php echo $__env->make('partials.main', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /home/nordpzbm/hr.nordictravels.tech/resources/views/reports/pending-approvals.blade.php ENDPATH**/ ?>

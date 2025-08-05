@@ -132,6 +132,7 @@
                                         <select name="is_intern" class="form-control">
                                             <option value="0" {{ old('is_intern', $tourGuide->user->is_intern ?? 0) == 0 ? 'selected' : '' }}>No</option>
                                             <option value="1" {{ old('is_intern', $tourGuide->user->is_intern ?? 0) == 1 ? 'selected' : '' }}>Yes</option>
+                                            <option value="2" {{ old('is_intern', $tourGuide->user->is_intern ?? 0) == 2 ? 'selected' : '' }}>Yes with Housing Compensation</option>
                                         </select>
                                         @error('is_intern')
                                             <small class="text-danger">{{ $message }}</small>

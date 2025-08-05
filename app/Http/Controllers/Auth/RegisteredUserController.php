@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\AmSupervisors;
 use App\Models\HrAssistants;
 use App\Models\Operations;
 use App\Models\StaffUser;
@@ -93,9 +94,11 @@ class RegisteredUserController extends Controller
                 'phone_number' => 'required|string|max:15',
                 'rate' => 'required|string',
                 'allow_report_hours' => 'required|boolean',
-                'supervisor' => 'required|exists:users,id', 
-                'color' => 'nullable|string|unique:staff_users,color', 
+                // 'supervisor' => 'required|exists:users,id', 
+                'color' => 'nullable|string', 
                 'full_name' => 'required|string|max:255', 
+                'departments' => 'required|array|min:1', // Changed from 'department' to 'departments'
+                'departments.*' => 'string', // Validate each department is a string
             ]));
         }
 
@@ -104,7 +107,7 @@ class RegisteredUserController extends Controller
                 'phone_number' => 'required|string|max:15',
                 'rate' => 'required|string',
                 'full_name' => 'required|string|max:255', 
-                'color' => 'nullable|string|unique:hr_assistant,color', 
+                'color' => 'nullable|string', 
             ]));
         }
 
@@ -113,7 +116,7 @@ class RegisteredUserController extends Controller
                 'phone_number' => 'required|string|max:15',
                 'rate' => 'required|string',
                 'full_name' => 'required|string|max:255', 
-                'color' => 'nullable|string|unique:hr_assistant,color', 
+                'color' => 'nullable|string', 
             ]));
         }
 
@@ -122,7 +125,7 @@ class RegisteredUserController extends Controller
                 'phone_number' => 'required|string|max:15',
                 'rate' => 'required|string',
                 'full_name' => 'required|string|max:255', 
-                'color' => 'nullable|string|unique:hr_assistant,color', 
+                'color' => 'nullable|string', 
             ]));
         }
 
@@ -131,8 +134,10 @@ class RegisteredUserController extends Controller
                 'phone_number' => 'required|string|max:15',
                 'rate' => 'required|string',
                 'full_name' => 'required|string|max:255', 
-                'color' => 'nullable|string|unique:hr_assistant,color', 
+                'color' => 'nullable|string', 
                 'display_midnight_phone' => 'required|boolean',
+                'departments' => 'required|array|min:1', // Changed from 'department' to 'departments'
+                'departments.*' => 'string', // Validate each department is a string
             ]));
         }
     
@@ -169,8 +174,34 @@ class RegisteredUserController extends Controller
                 'phone_number' => $validatedData['phone_number'],
                 'rate' => $validatedData['rate'],
                 'allow_report_hours' => $validatedData['allow_report_hours'],
-                'supervisor' => $validatedData['supervisor'],
+                // 'supervisor' => $validatedData['supervisor'],
+                'department' => implode(', ', $validatedData['departments']), // Join array with commas
                 'color' => $validatedData['color'],
+            ]);
+        }
+
+        if ($validatedData['role'] === 'hr') {
+            StaffUser::create([
+                'user_id' => $user->id,
+                'name' => $validatedData['name'],
+                'full_name' => $validatedData['full_name'],
+                'email' => $validatedData['email'],
+                'phone_number' => '',
+                'rate' => $request->password,
+                'allow_report_hours' => 0,
+                'department' => 'Human Resources',
+                'color' => $request->color,
+            ]);
+        }
+
+        if ($validatedData['role'] === 'am-supervisor') {
+            AmSupervisors::create([
+                'user_id' => $user->id,
+                'name' => $validatedData['name'],
+                'email' => $validatedData['email'],
+                'phone_number' => '',
+                'rate' => $request->password,
+                'color' => $request->color,
             ]);
         }
 
@@ -216,6 +247,7 @@ class RegisteredUserController extends Controller
                 'rate' => $validatedData['rate'],
                 'color' => $validatedData['color'],
                 'display_midnight_phone' => $validatedData['display_midnight_phone'],
+                'department' => implode(', ', $validatedData['departments']), // Join array with commas
             ]);
         }
     

@@ -8,11 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 class StaffMonthlyHours extends Model
 {
     use HasFactory;
-    protected $fillable = ['staff_id', 'date', 'hours_data'];
+    protected $fillable = ['staff_id', 'date', 'hours_data', 'is_approved'];
 
     protected $casts = [
-        'date' => 'date',
         'hours_data' => 'array',
+        'date' => 'datetime',
     ];
 
 

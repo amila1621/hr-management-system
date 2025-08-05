@@ -44,9 +44,9 @@
                                         <!-- Left side - Selected Guides -->
                                         <div class="col-md-8">
                                             <div class="form-group mb-4">
-                                                <label for="manager_id">Select Team Lead</label>
+                                                <label for="manager_id">Select Bus Driver Supervisor</label>
                                                 <select name="manager_id" id="manager_id" class="form-control" required>
-                                                    <option value="">Choose a Team Lead</option>
+                                                    <option value="">Choose a Bus Driver Supervisor</option>
                                                     @foreach($managers as $manager)
                                                         <option value="{{ $manager->id }}">{{ $manager->name }}</option>
                                                     @endforeach

@@ -61,6 +61,7 @@
                                         <thead>
                                             <tr>
                                                 <th>Name</th>
+                                                <th>Full Name</th>
                                                 <th>Email</th>
                                                 <th>Phone Number</th>
                                                 <th>Note</th>
@@ -74,6 +75,7 @@
                                             <?php $__currentLoopData = $tourGuides; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $tourGuide): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                                 <tr>
                                                     <td><?php echo e($tourGuide->name); ?></td>
+                                                    <td><?php echo e($tourGuide->full_name); ?></td>
                                                     <td><?php echo e($tourGuide->email); ?></td>
                                                     <td><?php echo e($tourGuide->phone_number); ?></td>
                                                     <td><?php echo e($tourGuide->rate); ?></td>
@@ -118,6 +120,7 @@
                                                                 onclick="return confirm('Are you sure you want to delete this tour guide?')">Delete</button>
                                                         </form>
 
+
                                                         <!-- Change Password Button -->
                                                         <button type="button" class="btn btn-sm btn-warning"
                                                             data-toggle="modal"
@@ -142,8 +145,27 @@
                                                                 onclick="return confirm('Are you sure you want to unhide this tour guide?')">Unhide</button>
                                                         </form>
                                                         <?php endif; ?>
-                                                        
 
+                                                        
+                                                        <form action="<?php echo e(route('tour-guides.terminate', $tourGuide->id)); ?>"
+                                                            method="POST" style="display:inline-block;">
+                                                            <?php echo csrf_field(); ?>
+                                                            <?php echo method_field('POST'); ?>
+                                                            <button type="submit" class="btn btn-sm btn-danger"
+                                                                onclick="return confirm('Are you sure you want to Terminate this tour guide?')">Terminate</button>
+                                                        </form>
+
+                                                        <!-- Make a Guide/Staff Button -->
+                                                        <?php
+                                                            $isAlreadyStaff = \App\Models\StaffUser::where('user_id', $tourGuide->user_id)->exists();
+                                                        ?>
+                                                        <?php if(!$isAlreadyStaff): ?>
+                                                        <button type="button" class="btn btn-sm btn-success"
+                                                            data-toggle="modal"
+                                                            data-target="#makeGuideStaffModal<?php echo e($tourGuide->id); ?>">
+                                                            Make a Guide/Staff
+                                                        </button>
+                                                        <?php endif; ?>
                                                     </td>
                                                 </tr>
 
@@ -187,7 +209,55 @@
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <!-- End of Modal -->
+                                                <!-- End of Change Password Modal -->
+
+                                                <!-- Make a Guide/Staff Modal -->
+                                                <?php if(!$isAlreadyStaff): ?>
+                                                <div class="modal fade" id="makeGuideStaffModal<?php echo e($tourGuide->id); ?>"
+                                                    tabindex="-1" role="dialog"
+                                                    aria-labelledby="makeGuideStaffModalLabel<?php echo e($tourGuide->id); ?>"
+                                                    aria-hidden="true">
+                                                    <div class="modal-dialog" role="document">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title"
+                                                                    id="makeGuideStaffModalLabel<?php echo e($tourGuide->id); ?>">
+                                                                    Make <?php echo e($tourGuide->name); ?> a Guide/Staff</h5>
+                                                                <button type="button" class="close" data-dismiss="modal"
+                                                                    aria-label="Close">
+                                                                    <span aria-hidden="true">&times;</span>
+                                                                </button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <form action="<?php echo e(route('tour-guides.make-guide-staff', $tourGuide->id)); ?>" method="POST">
+                                                                    <?php echo csrf_field(); ?>
+                                                                    <?php echo method_field('PUT'); ?>
+                                                                    <div class="form-group">
+                                                                        <label for="department_id">Department</label>
+                                                                        <select name="department_id" class="form-control" required>
+                                                                            <?php
+                                                                                $departments = \App\Models\Departments::all();
+                                                                            ?>
+                                                                            <option value="">Select Department</option>
+                                                                            <?php $__currentLoopData = $departments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $department): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                                                <option value="<?php echo e($department->id); ?>">
+                                                                                    <?php echo e($department->department); ?>
+
+                                                                                </option>
+                                                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                                                        </select>
+                                                                    </div>
+                                                                    <input type="hidden" name="tour_guide_id" value="<?php echo e($tourGuide->id); ?>">
+                                                                    <button type="submit" class="btn btn-success">
+                                                                        Make Guide/Staff
+                                                                    </button>
+                                                                </form>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <?php endif; ?>
+                                                <!-- End of Make a Guide/Staff Modal -->
                                             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                         </tbody>
                                     </table>

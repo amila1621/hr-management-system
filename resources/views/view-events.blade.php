@@ -55,7 +55,6 @@
         .card-body {
             font-size: 13px;
             padding: 1rem;
-            max-height: 80vh;
         }
 
         .modal-body {
@@ -170,6 +169,31 @@
             overflow: hidden;
             position: fixed;
             width: 100%;
+        }
+
+        /* Webkit browsers */
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #666666;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888888;
+            border-radius: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555555;
+        }
+
+        /* Firefox */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #888888 #666666;
         }
     </style>
     <div class="content-page">

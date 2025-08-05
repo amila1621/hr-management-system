@@ -9,12 +9,28 @@
             <!-- LOGO -->
             <div class="topbar-left">
                 <a href="<?php echo e(route('dashboard')); ?>" class="logo">
-                    
-                    <h4>Dashboard</h4>
+                    <span class="logo-light">
+                        <img src="<?php echo e(asset('assets/images/nutlogo.png')); ?>" alt="logo" height="40">
+                    </span>
                 </a>
             </div>
 
+            <!-- Add this CSS in the head section or your stylesheet -->
+            <style>
+             
 
+                .logo img {
+                    vertical-align: middle;
+                }
+
+                .logo-light {
+                    display: flex;
+                    align-items: center;
+                    padding: 10px;
+                }
+
+              
+            </style>
 
             <nav class="navbar-custom">
                 <ul class="navbar-right list-inline float-right mb-0">
@@ -28,7 +44,7 @@
                         </a>
                     </li>
 
-                    <li class="dropdown notification-list list-inline-item">
+                    <li class="dropdown notification-list list-inline-item" style="margin-top: 0px;">
                         <div class="dropdown notification-list nav-pro-img">
                             <a class="dropdown-toggle nav-link arrow-none waves-effect nav-user" data-toggle="dropdown"
                                 href="#" role="button" aria-haspopup="false" aria-expanded="false">
@@ -51,7 +67,7 @@
 
                 <ul class="list-inline menu-left mb-0">
                     <li class="float-left">
-                        <button class="button-menu-mobile open-left waves-effect">
+                        <button class="button-menu-mobile open-left waves-effect"  style="z-index: 1; margin: -14px -60px -60px -60px;">
                             <i class="mdi mdi-menu"></i>
                         </button>
                     </li>
@@ -61,4 +77,15 @@
 
         </div>
         <!-- Top Bar End -->
+
+        <script>
+            // Add event listeners for modal open/close
+            $('#aiCalculationModal').on('show.bs.modal', function () {
+                document.body.style.overflow = 'hidden';
+            });
+
+            $('#aiCalculationModal').on('hidden.bs.modal', function () {
+                document.body.style.overflow = 'auto';
+            });
+        </script>
 <?php /**PATH /home/nordpzbm/hr.nordictravels.tech/resources/views/partials/header.blade.php ENDPATH**/ ?>

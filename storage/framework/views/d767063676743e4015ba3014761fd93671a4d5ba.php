@@ -1,3 +1,5 @@
+
+
 <?php
 if (!function_exists('formatTime')) {
     function formatTime($hours)
@@ -153,12 +155,14 @@ $totalHolidayNightHours = 0;
                                                     <tr data-event-id="<?php echo e($salary->event->id); ?>" data-salary-id="<?php echo e($salary->id); ?>">
                                                         <td>
                                                             <?php if($salary->guide_start_time): ?>
-                                                                <!-- <?php echo e(\Carbon\Carbon::parse($salary->guide_start_time)->format('d.m.Y')); ?> -->
+                                                                <?php echo e(\Carbon\Carbon::parse($salary->guide_start_time)->format('d')); ?>
+
                                                                 <!-- <br> -->
                                                                 <?php echo e(\Carbon\Carbon::parse($salary->guide_start_time)->format('D.')); ?>
 
                                                             <?php elseif($salary->event->start_time): ?>
-                                                                <!-- <?php echo e(\Carbon\Carbon::parse($salary->event->start_time)->format('d.m.Y')); ?> -->
+                                                                <?php echo e(\Carbon\Carbon::parse($salary->event->start_time)->format('d')); ?>
+
                                                                 <!-- <br> -->
                                                                 <?php echo e(\Carbon\Carbon::parse($salary->event->start_time)->format('D.')); ?>
 
@@ -223,7 +227,7 @@ $totalHolidayNightHours = 0;
                                                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                             </tbody>
-                                            <?php if(auth()->user()->role === 'admin'): ?>
+                                            <?php if(auth()->user()->role === 'admin' || auth()->user()->role === 'hr-assistant'  || auth()->user()->role === 'team-lead'): ?>
                                                 <tfoot>
                                                     <tr>
                                                         <th colspan="2">Total</th>
@@ -625,7 +629,7 @@ $totalHolidayNightHours = 0;
     }
 
     @keyframes highlightFade {
-        0% { background-color: #fff3cd; }
+        0% { background-color: #917006; }
         100% { background-color: transparent; }
     }
 
@@ -635,6 +639,10 @@ $totalHolidayNightHours = 0;
 
     #datatable-buttons_filter label {
         color: white;
+    }
+
+    .navbar-right {
+        margin-top: 15px;
     }
 </style>
 <?php echo $__env->make('partials.main', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /home/nordpzbm/hr.nordictravels.tech/resources/views/reports/guide-wise-report.blade.php ENDPATH**/ ?>

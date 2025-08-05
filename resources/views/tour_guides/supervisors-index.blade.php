@@ -63,18 +63,23 @@
                                                 <th>Phone Number</th>
                                                 <th>Rate</th>
                                                 <th>Color</th>
+                                                <th>Department</th>
                                                 <th>Display Midnight Phone</th>
                                                 <th>Action</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             @foreach ($supervisors as $supervisor)
+                                            @if($supervisor->department == 'AM')
+                                                @continue
+                                            @endif
                                                 <tr>
                                                     <td>{{ $supervisor->name }}</td>
                                                     <td>{{ $supervisor->email }}</td>
                                                     <td>{{ $supervisor->supervisor->phone_number }}</td>
                                                     <td>{{ $supervisor->supervisor->rate }}</td>
                                                     <td>{{ $supervisor->supervisor->color }}</td>
+                                                    <td>{{ $supervisor->supervisor->department }}</td>
                                                     <td>{{ $supervisor->supervisor->display_midnight_phone ? 'Yes' : 'No' }}</td>
                                                    
                                                     <td>

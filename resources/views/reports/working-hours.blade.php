@@ -111,10 +111,17 @@
                         <div style="margin-bottom: 10px;" class="row">
 
                             <div class="col-4">
-                                <select name="start_date" class="form-control">
-                                    <option value="2024-10-14">2024-10-14 to 2025-01-26 - (Current Segment)</option>
-                                    <option value="2024-07-01">2024-07-01 to 2024-10-13 - (Previous Segment)</option>
-                                </select>
+                        <select name="start_date" class="form-control">
+                            <option value="2024-10-14" {{ $currentweek == '2024-10-14' ? 'selected' : '' }}>
+                                14/10/2024 to 16/02/2025 - (Previous Segment)
+                            </option>
+                            <option value="2025-02-17" {{ $currentweek == '2025-02-17' ? 'selected' : '' }}>
+                                17/02/2025 to 22/06/2025 - (Previous Segment)
+                            </option>
+                            <option value="2025-06-23" {{ $currentweek == '2025-06-23' ? 'selected' : '' }}>
+                                23/06/2025 to 26/10/2025 - (Current Segment)
+                            </option>
+                        </select>
                             </div>
                             <div class="col-2">
                                 <button class="btn btn-primary btn-sm" type="submit">Filter</button>
@@ -131,36 +138,46 @@
                             <tr>
                                 <th class="sortable" data-sort="string">Guide Name</th>
 
-                                <th class="sortable" data-sort="number">1st 3 Week <br>
+                                <th class="sortable" data-sort="number">1st 3 Weeks <br>
                                     {{ $startDate->copy()->format('d/m') }} to
                                     {{ $startDate->copy()->addWeeks(3)->subDay()->format('d/m') }}
                                 </th>
-                                <th class="sortable" data-sort="number">2nd 3 Week <br>
+                                <th class="sortable" data-sort="number">2nd 3 Weeks <br>
                                     {{ $startDate->copy()->addWeeks(3)->format('d/m') }} to
                                     {{ $startDate->copy()->addWeeks(6)->subDay()->format('d/m') }}
                                 </th>
-                                <th class="sortable" data-sort="number">3rd 3 Week <br>
+                                <th class="sortable" data-sort="number">3rd 3 Weeks <br>
                                     {{ $startDate->copy()->addWeeks(6)->format('d/m') }} to
                                     {{ $startDate->copy()->addWeeks(9)->subDay()->format('d/m') }}
                                 </th>
-                                <th class="sortable" data-sort="number">4th 3 Week <br>
+                                <th class="sortable" data-sort="number">4th 3 Weeks <br>
                                     {{ $startDate->copy()->addWeeks(9)->format('d/m') }} to
                                     {{ $startDate->copy()->addWeeks(12)->subDay()->format('d/m') }}
                                 </th>
-                                <th class="sortable" data-sort="number">5th 3 Week <br>
+                                <th class="sortable" data-sort="number">5th 3 Weeks <br>
                                     {{ $startDate->copy()->addWeeks(12)->format('d/m') }} to
                                     {{ $startDate->copy()->addWeeks(15)->subDay()->format('d/m') }}
                                 </th>
-                                <th class="sortable" data-sort="number">6th 3 Week <br>
+                                <th class="sortable" data-sort="number">6th 3 Weeks <br>
                                     {{ $startDate->copy()->addWeeks(15)->format('d/m') }} to
                                     {{ $startDate->copy()->addWeeks(18)->subDay()->format('d/m') }}
                                 </th>
-
+                                <th class="sortable" data-sort="number" style="font-weight: bold;">Total Hours</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach ($guides as $guide)
-                                @if (Auth::user()->role == 'admin' || Auth::user()->role == 'manager' || Auth::user()->role == 'hr-assistant')
+                                @php
+                                    // Calculate total hours for all 6 periods
+                                    $totalHours = ($guide->working_hours['period1_hours'] ?? 0) + 
+                                                 ($guide->working_hours['period2_hours'] ?? 0) + 
+                                                 ($guide->working_hours['period3_hours'] ?? 0) + 
+                                                 ($guide->working_hours['period4_hours'] ?? 0) + 
+                                                 ($guide->working_hours['period5_hours'] ?? 0) + 
+                                                 ($guide->working_hours['period6_hours'] ?? 0);
+                                @endphp
+                                
+                                @if (Auth::user()->role == 'admin' || Auth::user()->role == 'manager' || Auth::user()->role == 'hr-assistant' || Auth::user()->role == 'staff')
                                     <tr>
                                         <td>{{ $guide->name }}</td>
 
@@ -191,6 +208,10 @@
                                         <td
                                             class="{{ ($guide->working_hours['period6_hours'] ?? 0) > 144 ? 'table-warning' : (($guide->working_hours['period6_hours'] ?? 0) > 120 ? '' : '') }}">
                                             {{ formatTime($guide->working_hours['period6_hours'] ?? 0) }}
+                                        </td>
+
+                                        <td style=" font-weight: bold; {{ $totalHours > 864 ? 'color: #dc3545;' : ($totalHours > 720 ? 'color: #fd7e14;' : '') }}">
+                                            {{ formatTime($totalHours) }}
                                         </td>
                                     </tr>
                                 @elseif (Auth::user()->role == 'supervisor' || Auth::user()->role == 'operation')
@@ -225,6 +246,10 @@
                                             <td
                                                 class="{{ ($guide->working_hours['period6_hours'] ?? 0) > 144 ? 'table-warning' : (($guide->working_hours['period6_hours'] ?? 0) > 120 ? '' : '') }}">
                                                 {{ formatTime($guide->working_hours['period6_hours'] ?? 0) }}
+                                            </td>
+
+                                            <td style="font-weight: bold; {{ $totalHours > 864 ? 'color: #dc3545;' : ($totalHours > 720 ? 'color: #fd7e14;' : '') }}">
+                                                {{ formatTime($totalHours) }}
                                             </td>
                                         </tr>
                                     @endif
@@ -293,6 +318,41 @@
                 });
             });
         });
+
+        document.addEventListener('DOMContentLoaded', function() {
+    const table = $('#guideTable').DataTable({
+        dom: 'Bfrtip',
+        buttons: [
+            'copy', 'csv', 'excel', 'pdf', 'print'
+        ],
+        lengthChange: true,
+        searching: true,
+        paging: false,
+        ordering: true,
+        info: false,
+        columnDefs: [{
+            targets: '_all',
+            className: 'text-center'
+        }],
+        // Custom sorting for time values
+        columnDefs: [{
+            targets: [1, 2, 3, 4, 5, 6, 7], // time columns (including new total column)
+            type: 'time',
+            render: function(data, type, row) {
+                if (type === 'sort') {
+                    const parts = data.trim().split(':');
+                    return parts.length > 1 ? parseInt(parts[0]) * 60 + parseInt(parts[1]) : parseInt(parts[0]) * 60;
+                }
+                return data;
+            }
+        }]
+    });
+
+    // Search functionality
+    $('#searchInput').on('keyup', function() {
+        table.search(this.value).draw();
+    });
+});
 
         flatpickr(".flatpickr", {
             dateFormat: "Y-m-d",

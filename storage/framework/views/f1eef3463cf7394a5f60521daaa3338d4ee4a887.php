@@ -177,6 +177,7 @@ unset($__errorArgs, $__bag); ?>
                                         <select name="is_intern" class="form-control">
                                             <option value="0" <?php echo e(old('is_intern', $tourGuide->user->is_intern ?? 0) == 0 ? 'selected' : ''); ?>>No</option>
                                             <option value="1" <?php echo e(old('is_intern', $tourGuide->user->is_intern ?? 0) == 1 ? 'selected' : ''); ?>>Yes</option>
+                                            <option value="2" <?php echo e(old('is_intern', $tourGuide->user->is_intern ?? 0) == 2 ? 'selected' : ''); ?>>Yes with Housing Compensation</option>
                                         </select>
                                         <?php $__errorArgs = ['is_intern'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');

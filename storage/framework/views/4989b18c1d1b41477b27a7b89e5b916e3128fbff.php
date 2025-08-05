@@ -58,6 +58,21 @@ if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?>
                                     </div>
+                                    <div class="form-group">
+                                        <label for="full_name">Full Name</label>
+                                        <input type="text" name="full_name" class="form-control"
+                                            value="<?php echo e(old('full_name', $staffUsers->full_name)); ?>" required>
+                                        <?php $__errorArgs = ['full_name'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                            <small class="text-danger"><?php echo e($message); ?></small>
+                                        <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                    </div>
 
                                     <div class="form-group">
                                         <label for="email">Email</label>
@@ -123,6 +138,40 @@ unset($__errorArgs, $__bag); ?>
                                     </div>
 
                                     <div class="form-group">
+                                        <label for="department">Department(s)</label>
+                                        <div class="department-checkbox-container">
+                                            <?php
+                                            $departments = App\Models\Departments::orderBy('department')->pluck('department')->toArray();
+                
+                                            
+                                            // Convert existing department string to array by splitting on commas
+                                            $currentDepartments = old('departments', explode(', ', $supervisor->department));
+                                            ?>
+                                            
+                                            <?php $__currentLoopData = $departments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $dept): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                <div class="custom-control custom-checkbox">
+                                                    <input type="checkbox" class="custom-control-input" 
+                                                        id="dept-<?php echo e(Str::slug($dept)); ?>" 
+                                                        name="departments[]" 
+                                                        value="<?php echo e($dept); ?>" 
+                                                        <?php echo e(in_array($dept, $currentDepartments) ? 'checked' : ''); ?>>
+                                                    <label class="custom-control-label" for="dept-<?php echo e(Str::slug($dept)); ?>"><?php echo e($dept); ?></label>
+                                                </div>
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                        </div>
+                                        <?php $__errorArgs = ['departments'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                            <small class="text-danger"><?php echo e($message); ?></small>
+                                        <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                    </div>
+
+                                    <div class="form-group">
                                         <label for="display_midnight_phone">Display Midnight Phone</label>
                                         <select name="display_midnight_phone" class="form-control">
                                             <option value="0" <?php echo e(old('display_midnight_phone', $supervisor->display_midnight_phone) == '0' ? 'selected' : ''); ?>>No</option>
@@ -147,6 +196,7 @@ unset($__errorArgs, $__bag); ?>
                                         <select name="is_intern" class="form-control" required>
                                             <option value="1" <?php echo e($supervisor->user->is_intern ? 'selected' : ''); ?>>Yes</option>
                                             <option value="0" <?php echo e(!$supervisor->user->is_intern ? 'selected' : ''); ?>>No</option>
+                                           
                                         </select>
                                     </div>
 

@@ -63,6 +63,16 @@ return [
             ]) : [],
         ],
 
+        
+        'secondary' => [ // Secondary Database
+            'driver' => 'mysql',
+            'host' => env('DB_SECONDARY_HOST', '127.0.0.1'),
+            'database' => env('DB_SECONDARY_DATABASE', 'nordpzbm_nuthrDup'),
+            'username' => env('DB_SECONDARY_USERNAME', 'nordpzbm_nuthrDup'),
+            'password' => env('DB_SECONDARY_PASSWORD', 'nordpzbm_nuthrDup'),
+        ],
+
+
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DATABASE_URL'),

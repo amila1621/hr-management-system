@@ -48,14 +48,13 @@
                                         </thead>
                                         <tbody>
                                             @foreach ($eventSalaries as $salary)
-                                                @if (Auth::user()->role == 'supervisor' || Auth::user()->role == 'operation')
-                                                    @if ($salary['tourGuide']->supervisor == Auth::id())
+
+                                                    @if (isset($salary['tourGuide']))
                                                         <tr>
                                                             <td>{{ $salary['tourGuide']->name }}</td>
-                                                            <td>{{ sprintf("%02d:%02d", floor($salary['totalNormalHours']), fmod($salary['totalNormalHours'], 1) * 60) }}</td>
-                                                             <td>{{ sprintf("%02d:%02d", floor($salary['totalHolidayHours']), fmod($salary['totalHolidayHours'], 1) * 60) }}</td>
+                                                            <td>{{ $salary['totalNormalHours'] }}</td>
+                                                            <td>{{ $salary['totalHolidayHours'] }}</td>
                                                         </tr>
-                                                    @endif
                                                 @endif
                                             @endforeach
                                         </tbody>

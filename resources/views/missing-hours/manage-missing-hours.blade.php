@@ -70,10 +70,10 @@
                                                 <tr>
                                                     <td><a target="_blank" href="/get-guide-wise-reports?guide_id={{ $entry->guide_id }}&start_date={{ \Carbon\Carbon::parse($entry->date)->format('Y-m-01')}}&end_date={{ \Carbon\Carbon::parse($entry->date)->endOfMonth()->format('Y-m-d')}}">{{ $entry->guide_name }}</a></td>
                                                     <td>{{ \Carbon\Carbon::parse($entry->date)->format('d M Y') }}</td>
-                                                    <td>{{ $entry->normal_hours }}</td>
-                                                    <td>{{ $entry->normal_night_hours }}</td>
-                                                    <td>{{ $entry->holiday_hours }}</td>
-                                                    <td>{{ $entry->holiday_night_hours }}</td>
+                                                    <td>{{ str_replace('.', ':', $entry->normal_hours) }}</td>
+                                                    <td>{{ str_replace('.', ':', $entry->normal_night_hours) }}</td>
+                                                    <td>{{ str_replace('.', ':', $entry->holiday_hours) }}</td>
+                                                    <td>{{ str_replace('.', ':', $entry->holiday_night_hours) }}</td>
                                                     <td>{{ $entry->tour_name }}</td>
                                                     <td>{{ \Carbon\Carbon::parse($entry->applied_at)->format('M Y') }}</td>
                                                     <td>

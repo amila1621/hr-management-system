@@ -76,11 +76,7 @@
                                             @foreach ($combinedData as $record)
                                                 <tr @if($record["type"] == "sick_leave") style="background-color:#806600;" @endif>
                                                     <td>
-                                                        @if($record['type'] == 'event')
-                                                            {{ \Carbon\Carbon::parse($record['start_time'])->format('d.m.Y') }}
-                                                        @else
-                                                            {{ \Carbon\Carbon::parse($record['date'])->format('d.m.Y') }}
-                                                        @endif
+                                                        {{ \Carbon\Carbon::parse($record['date'])->format('d.m.Y') }}
                                                     </td>
                                                     <td>
                                                         {{ $record['tour_name'] }}
@@ -90,15 +86,15 @@
                                                     </td>
                                                     <td>
                                                         @if($record['type'] == 'event')
-                                                            @if(isset($record['guide_times']))
-                                                                @foreach(json_decode($record['guide_times'], true) ?? [] as $time)
-                                                                    {{ \Carbon\Carbon::parse($time['start'])->format('H:i') }} - 
-                                                                    {{ \Carbon\Carbon::parse($time['end'])->format('H:i') }}<br>
-                                                                @endforeach
+                                                        
+                                                        @if($record['guide_start_time'])
+                                                        {{ \Carbon\Carbon::parse($record['guide_start_time'])->format('H:i') }} - 
+                                                        {{ \Carbon\Carbon::parse($record['guide_end_time'])->format('H:i') }}
                                                             @else
-                                                                {{ \Carbon\Carbon::parse($record['start_time'])->format('H:i') }} - 
-                                                                {{ \Carbon\Carbon::parse($record['end_time'])->format('H:i') }}
+                                                                N/A
                                                             @endif
+                                                        
+                                                          
                                                         @else
                                                             {{ \Carbon\Carbon::parse($record['start_time'])->format('H:i') }} - 
                                                             {{ \Carbon\Carbon::parse($record['end_time'])->format('H:i') }}
@@ -161,8 +157,33 @@
                                                         @endif
                                                     </td>
                                                 </tr>
+
                                             @endforeach
+
+                                            
                                         </tbody>
+
+                                        @php
+                                            $today = \Carbon\Carbon::now();
+                                            $isLastDayOfMonth = $today->copy()->endOfMonth()->format('Y-m-d') === $today->format('Y-m-d');
+                                        @endphp
+
+                                        @if($isLastDayOfMonth)
+
+                                        <tfoot>
+                                            <tr class="font-weight-bold">
+                                                <td colspan="3">Total</td>
+                                                <td id="total-work-hours">0:00</td>
+                                                <td id="total-holiday-hours">0:00</td>
+                                                <td id="total-night-hours">0:00</td>
+                                                <td id="total-holiday-night-hours">0:00</td>
+                                                @if (auth()->user()->role === 'admin' || auth()->user()->role === 'hr-assistant')
+                                                    <td></td>
+                                                @endif
+                                            </tr>
+                                        </tfoot>
+
+                                        @endif
                                     </table>
                                 </div>
                             </div>
@@ -218,7 +239,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                        <button type="submit" class="btn btn-primary">Save changes</button>
+                        <button type="submit" id="btnSubmitUpdateHours" class="btn btn-primary">Save changes</button>
                     </div>
                 </form>
             </div>
@@ -295,8 +316,11 @@
                 
                 // If there are existing times, populate them
                 if (startTime && endTime) {
-                    $('.guide-start-time').first()[0]._flatpickr.setDate(startTime);
-                    $('.guide-end-time').first()[0]._flatpickr.setDate(endTime);
+                    // $('.guide-start-time').first()[0]._flatpickr.setDate(startTime);
+                    // $('.guide-end-time').first()[0]._flatpickr.setDate(endTime);
+
+                    $('.guide-start-time').first()[0]._flatpickr.setDate(new Date(startTime));
+                    $('.guide-end-time').first()[0]._flatpickr.setDate(new Date(endTime));
                 }
                 
                 $('#modal-guide-comment').val(guideComment);
@@ -309,6 +333,7 @@
             $('#updateHoursForm').on('submit', function(e) {
                 e.preventDefault(); // Prevent default form submission
 
+                $('#btnSubmitUpdateHours').prop('disabled', true);
                 const formData = new FormData(this);
                 const eventSalaryId = $('#modal-event-salary-id').val();
 
@@ -321,6 +346,7 @@
                     success: function(response) {
                         $('#editHoursModal').modal('hide');
                         location.reload();
+                        $('#btnSubmitUpdateHours').prop('disabled', false);
                     },
                     error: function(xhr) {
                         const errors = xhr.responseJSON.errors;
@@ -328,12 +354,61 @@
                         for (const field in errors) {
                             errorMessage += `${field}: ${errors[field].join(', ')}\n`;
                         }
+
+                        $('#btnSubmitUpdateHours').prop('disabled', false);
                         alert(errorMessage);
                     }
                 });
             });
         });
     </script>
+
+<script>
+function timeToMinutes(timeStr) {
+    if (!timeStr) return 0;
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return (hours * 60) + (minutes || 0);
+}
+
+function minutesToTimeString(totalMinutes) {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours}:${minutes.toString().padStart(2, '0')}`;
+}
+
+function calculateTotals() {
+    let totalWorkHours = 0;
+    let totalHolidayHours = 0;
+    let totalNightHours = 0;
+    let totalHolidayNightHours = 0;
+
+    // Sum only approved (1) and adjusted (2) rows
+    document.querySelectorAll('tbody tr').forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const statusBadge = row.querySelector('.badge');
+        
+        // Only include in totals if status is approved or adjusted
+        if (statusBadge && 
+            (statusBadge.classList.contains('badge-success') || // Approved
+             statusBadge.classList.contains('badge-secondary'))) { // Adjusted
+            
+            totalWorkHours += timeToMinutes(cells[3].textContent);
+            totalHolidayHours += timeToMinutes(cells[4].textContent);
+            totalNightHours += timeToMinutes(cells[5].textContent);
+            totalHolidayNightHours += timeToMinutes(cells[6].textContent);
+        }
+    });
+
+    // Update totals row with calculated values
+    document.getElementById('total-work-hours').textContent = minutesToTimeString(totalWorkHours);
+    document.getElementById('total-holiday-hours').textContent = minutesToTimeString(totalHolidayHours);
+    document.getElementById('total-night-hours').textContent = minutesToTimeString(totalNightHours);
+    document.getElementById('total-holiday-night-hours').textContent = minutesToTimeString(totalHolidayNightHours);
+}
+// Calculate totals when page loads
+document.addEventListener('DOMContentLoaded', calculateTotals);
+
+</script>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>

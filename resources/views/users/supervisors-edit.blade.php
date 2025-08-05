@@ -52,6 +52,14 @@
                                             <small class="text-danger">{{ $message }}</small>
                                         @enderror
                                     </div>
+                                    <div class="form-group">
+                                        <label for="full_name">Full Name</label>
+                                        <input type="text" name="full_name" class="form-control"
+                                            value="{{ old('full_name', $staffUsers->full_name) }}" required>
+                                        @error('full_name')
+                                            <small class="text-danger">{{ $message }}</small>
+                                        @enderror
+                                    </div>
 
                                     <div class="form-group">
                                         <label for="email">Email</label>
@@ -89,6 +97,33 @@
                                     </div>
 
                                     <div class="form-group">
+                                        <label for="department">Department(s)</label>
+                                        <div class="department-checkbox-container">
+                                            @php
+                                            $departments = App\Models\Departments::orderBy('department')->pluck('department')->toArray();
+                
+                                            
+                                            // Convert existing department string to array by splitting on commas
+                                            $currentDepartments = old('departments', explode(', ', $supervisor->department));
+                                            @endphp
+                                            
+                                            @foreach($departments as $dept)
+                                                <div class="custom-control custom-checkbox">
+                                                    <input type="checkbox" class="custom-control-input" 
+                                                        id="dept-{{ Str::slug($dept) }}" 
+                                                        name="departments[]" 
+                                                        value="{{ $dept }}" 
+                                                        {{ in_array($dept, $currentDepartments) ? 'checked' : '' }}>
+                                                    <label class="custom-control-label" for="dept-{{ Str::slug($dept) }}">{{ $dept }}</label>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                        @error('departments')
+                                            <small class="text-danger">{{ $message }}</small>
+                                        @enderror
+                                    </div>
+
+                                    <div class="form-group">
                                         <label for="display_midnight_phone">Display Midnight Phone</label>
                                         <select name="display_midnight_phone" class="form-control">
                                             <option value="0" {{ old('display_midnight_phone', $supervisor->display_midnight_phone) == '0' ? 'selected' : '' }}>No</option>
@@ -106,6 +141,7 @@
                                         <select name="is_intern" class="form-control" required>
                                             <option value="1" {{ $supervisor->user->is_intern ? 'selected' : '' }}>Yes</option>
                                             <option value="0" {{ !$supervisor->user->is_intern ? 'selected' : '' }}>No</option>
+                                           
                                         </select>
                                     </div>
 

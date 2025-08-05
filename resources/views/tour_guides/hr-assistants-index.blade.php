@@ -18,15 +18,15 @@
                     <div class="row align-items-center ">
                         <div class="col-md-8">
                             <div class="page-title-box">
-                                <h4 class="page-title">Manage HR Assistants</h4>
+                                <h4 class="page-title">Manage Guide Supervisors</h4>
                                 <ol class="breadcrumb">
                                     <li class="breadcrumb-item">
                                         <a href="javascript:void(0);">Home</a>
                                     </li>
                                     <li class="breadcrumb-item">
-                                        <a href="javascript:void(0);">HR Assistants</a>
+                                        <a href="javascript:void(0);">Guide Supervisors</a>
                                     </li>
-                                    <li class="breadcrumb-item active">View HR Assistants</li>
+                                    <li class="breadcrumb-item active">View Guide Supervisors</li>
                                 </ol>
                             </div>
                         </div>
@@ -50,7 +50,7 @@
                     <div class="col-12">
                         <div class="card">
                             <div class="card-body">
-                                <h4 class="mt-0 header-title">HR Assistants List</h4>
+                                <h4 class="mt-0 header-title">Guide Supervisors List</h4>
 
                                 <div class="table-responsive">
                                     <table id="datatable-buttons"
@@ -64,6 +64,7 @@
                                                 <th>Rate</th>
                                                 <th>Color</th>
                                                 <th>Intern Status</th>
+                                                <th>Allow Report Hours</th>
                                                 <th>Action</th>
                                             </tr>
                                         </thead>
@@ -76,6 +77,7 @@
                                                     <td>{{ $hrAssistant->hrAssistant->rate }}</td>
                                                     <td>{{ $hrAssistant->hrAssistant->color }}</td>
                                                     <td>{{ $hrAssistant->is_intern ? 'Yes' : 'No' }}</td>
+                                                    <td>{{ $hrAssistant->hrAssistant->allow_report_hours ? 'Yes' : 'No' }}</td>  
                                                     <td>
                                                         <a href="{{ route('hr-assistants.edit', $hrAssistant->id) }}"
                                                             class="btn btn-sm btn-primary">Edit</a>
@@ -85,7 +87,7 @@
                                                             @csrf
                                                             @method('DELETE')
                                                             <button type="submit" class="btn btn-sm btn-danger"
-                                                                onclick="return confirm('Are you sure you want to delete this hr assistant?')">Delete</button>
+                                                                onclick="return confirm('Are you sure you want to delete this Guide Supervisor?')">Delete</button>
                                                         </form>
 
                                                         <button type="button" class="btn btn-sm btn-warning"

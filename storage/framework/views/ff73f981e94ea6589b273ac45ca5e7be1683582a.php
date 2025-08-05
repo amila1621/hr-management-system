@@ -63,18 +63,23 @@
                                                 <th>Phone Number</th>
                                                 <th>Rate</th>
                                                 <th>Color</th>
+                                                <th>Department</th>
                                                 <th>Display Midnight Phone</th>
                                                 <th>Action</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <?php $__currentLoopData = $supervisors; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $supervisor): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                            <?php if($supervisor->department == 'AM'): ?>
+                                                <?php continue; ?>
+                                            <?php endif; ?>
                                                 <tr>
                                                     <td><?php echo e($supervisor->name); ?></td>
                                                     <td><?php echo e($supervisor->email); ?></td>
                                                     <td><?php echo e($supervisor->supervisor->phone_number); ?></td>
                                                     <td><?php echo e($supervisor->supervisor->rate); ?></td>
                                                     <td><?php echo e($supervisor->supervisor->color); ?></td>
+                                                    <td><?php echo e($supervisor->supervisor->department); ?></td>
                                                     <td><?php echo e($supervisor->supervisor->display_midnight_phone ? 'Yes' : 'No'); ?></td>
                                                    
                                                     <td>

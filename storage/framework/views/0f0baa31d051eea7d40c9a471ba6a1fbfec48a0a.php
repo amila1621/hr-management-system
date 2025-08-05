@@ -90,9 +90,9 @@
                                         document.querySelector('#reportForm').submit();
                                     });
 
-                                    document.addEventListener('DOMContentLoaded', function() {
-                                        document.getElementById('fetchCurrentMonth').click();
-                                    });
+                                     document.addEventListener('DOMContentLoaded', function() {
+                                         document.getElementById('fetchCurrentMonth').click();
+                                     });
                                 </script>
                             </div>
                         </div>

@@ -1,3 +1,5 @@
+
+
 <?php $__env->startSection('content'); ?>
     <div class="content-page">
         <div class="content">
@@ -10,7 +12,7 @@
                             <div class="card-body">
 
                                 <div class="table">
-                                    <table id="datatable-buttons" class="table table-striped table-bordered"
+                                    <table id="monthly-report-datatable" class="table table-striped table-bordered"
                                         style="border-collapse: collapse; border-spacing: 0; width: 100%">
                                         <thead>
                                             <tr>
@@ -24,10 +26,11 @@
                                         </thead>
                                         <tbody>
                                             <?php $__currentLoopData = $eventSalaries; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $salary): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                            <?php if(isset($salary['tourGuide'])): ?>
                                                 <?php if(Auth::user()->role == 'admin' || Auth::user()->role == 'hr-assistant'): ?>
                                                     <tr>
-                                                        <td><?php echo e($salary['tourGuide']->full_name); ?></td>
-                                                        <td><?php echo e($salary['tourGuide']->name); ?></td>
+                                                        <td><?php echo e($salary['tourGuide']?->full_name ?? 'N/A'); ?></td>
+                                                        <td><?php echo e($salary['tourGuide']?->name ?? 'N/A'); ?></td>
                                                         <td><?php echo e($salary['totalNormalHours']); ?></td>
                                                         <td><?php echo e($salary['totalHolidayHours']); ?></td>
                                                         <td><?php echo e($salary['totalNormalNightHours']); ?></td>
@@ -36,14 +39,15 @@
                                                 <?php elseif(Auth::user()->role == 'supervisor' || Auth::user()->role == 'operation'): ?>
                                                     <?php if($salary['tourGuide']->supervisor == Auth::id()): ?>
                                                         <tr>
-                                                            <td><?php echo e($salary['tourGuide']->full_name); ?></td>
-                                                            <td><?php echo e($salary['tourGuide']->name); ?></td>
+                                                        <td><?php echo e($salary['tourGuide']?->full_name ?? 'N/A'); ?></td>
+                                                        <td><?php echo e($salary['tourGuide']?->name ?? 'N/A'); ?></td>
                                                             <td><?php echo e($salary['totalNormalHours']); ?></td>
                                                             <td><?php echo e($salary['totalHolidayHours']); ?></td>
                                                             <td><?php echo e($salary['totalNormalNightHours']); ?></td>
                                                             <td><?php echo e($salary['totalHolidayNightHours']); ?></td>
                                                         </tr>
                                                     <?php endif; ?>
+                                                <?php endif; ?>
                                                 <?php endif; ?>
                                             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                         </tbody>
@@ -56,29 +60,38 @@
             </div>
         </div>
     </div>
-<?php $__env->stopSection(); ?>
-
-<?php $__env->startSection('scripts'); ?>
-    <!-- Include the DataTables and Buttons scripts -->
-    <script src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.7.1/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.7.1/js/buttons.flash.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.7.1/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.7.1/js/buttons.print.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
-
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    
     <script>
-        $(document).ready(function() {
-            $('#datatable-buttons').DataTable({
-                dom: 'Bfrtip',
-                buttons: [
-                    'copy', 'csv', 'excel', 'pdf', 'print'
-                ]
-            });
-        });
+            $(document).ready(function() {
+        // Define custom sorting after DataTables is loaded
+        $.fn.dataTable.ext.type.order['time-pre'] = function(data) {
+            if (!data) return 0;
+            
+            var parts = data.split(':');
+            return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        };
+
+       
+        
+        
+        $('#monthly-report-datatable').DataTable({
+        dom: 'Bfrtip',
+        buttons: [
+            'copy', 'csv', 'excel', 'pdf', 'print'
+        ],
+        columnDefs: [
+            { type: 'time', targets: [2, 3, 4, 5] }
+        ],
+        order: [[0, 'asc']],
+        searching: true,
+        ordering: true,
+        paging: false,     // Disable pagination
+        info: false        // Remove "Showing X of Y entries" text
+    });
+    });
     </script>
 <?php $__env->stopSection(); ?>
-
 <?php echo $__env->make('partials.main', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /home/nordpzbm/hr.nordictravels.tech/resources/views/reports/monthly.blade.php ENDPATH**/ ?>

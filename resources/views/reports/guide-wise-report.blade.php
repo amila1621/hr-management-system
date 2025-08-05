@@ -216,7 +216,7 @@ $totalHolidayNightHours = 0;
                                                     @endforeach
                                                 @endforeach
                                             </tbody>
-                                            @if (auth()->user()->role === 'admin')
+                                            @if (auth()->user()->role === 'admin' || auth()->user()->role === 'hr-assistant'  || auth()->user()->role === 'team-lead')
                                                 <tfoot>
                                                     <tr>
                                                         <th colspan="2">Total</th>
@@ -618,7 +618,7 @@ $totalHolidayNightHours = 0;
     }
 
     @keyframes highlightFade {
-        0% { background-color: #fff3cd; }
+        0% { background-color: #917006; }
         100% { background-color: transparent; }
     }
 

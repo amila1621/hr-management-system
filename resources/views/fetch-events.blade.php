@@ -104,6 +104,29 @@
                         <div class="card">
                             <div class="card-body">
                                 <h4 class="mt-0 header-title">Last Tours History</h4>
+                                @php
+                                    // Determine the date range - let's use the last 7 days
+                                    $endDate = now();
+                                    $startDate = now()->subDays(40); // 7 days including today
+                                    $dateRange = [];
+                                    
+                                    // Create an array with all dates in the range
+                                    for ($date = clone $startDate; $date <= $endDate; $date->addDay()) {
+                                        $dateRange[$date->format('Y-m-d')] = [];
+                                    }
+                                    
+                                    // Group tours by date
+                                    foreach ($lastTours as $tour) {
+                                        $tourDate = Carbon\Carbon::parse($tour->tour_date)->format('Y-m-d');
+                                        if (isset($dateRange[$tourDate])) {
+                                            $dateRange[$tourDate][] = $tour;
+                                        }
+                                    }
+                                    
+                                    // Sort by date in descending order (most recent first)
+                                    krsort($dateRange);
+                                @endphp
+
                                 <div class="table-responsive">
                                     <table id="datatable-buttons" class="table table-striped mb-0">
                                         <thead>
@@ -111,19 +134,26 @@
                                                 <th>Date</th>
                                                 <th>Tour Name</th>
                                                 <th>Guide</th>
-                                                <th>Start Time</th>
                                                 <th>End Time</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach($lastTours as $tour)
-                                                <tr>
-                                                    <td>{{ Carbon\Carbon::parse($tour->tour_date)->format('Y-m-d') }}</td>
-                                                    <td>{{ $tour->tour_name }}</td>
-                                                    <td>{{ $tour->guide }}</td>
-                                                    <td>{{ Carbon\Carbon::parse($tour->start_time) }}</td>
-                                                    <td>{{ Carbon\Carbon::parse($tour->end_time) }}</td>
-                                                </tr>
+                                            @foreach($dateRange as $date => $tours)
+                                                @if(count($tours) > 0)
+                                                    @foreach($tours as $tour)
+                                                        <tr>
+                                                            <td>{{ Carbon\Carbon::parse($tour->tour_date)->format('d/m/Y') }}</td>
+                                                            <td>{{ $tour->tour_name }}</td>
+                                                            <td>{{ $tour->guide }}</td>
+                                                            <td>{{ Carbon\Carbon::parse($tour->end_time)->format('d/m/Y H:i:s') }}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                @else
+                                                    <tr>
+                                                        <td>{{ Carbon\Carbon::parse($date)->format('d/m/Y') }}</td>
+                                                        <td colspan="3" class="text-center text-muted">No tours available</td>
+                                                    </tr>
+                                                @endif
                                             @endforeach
                                         </tbody>
                                     </table>
@@ -165,4 +195,4 @@
         
     @endsection
 
-   
+

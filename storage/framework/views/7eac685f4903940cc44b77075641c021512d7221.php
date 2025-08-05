@@ -106,6 +106,29 @@
                         <div class="card">
                             <div class="card-body">
                                 <h4 class="mt-0 header-title">Last Tours History</h4>
+                                <?php
+                                    // Determine the date range - let's use the last 7 days
+                                    $endDate = now();
+                                    $startDate = now()->subDays(40); // 7 days including today
+                                    $dateRange = [];
+                                    
+                                    // Create an array with all dates in the range
+                                    for ($date = clone $startDate; $date <= $endDate; $date->addDay()) {
+                                        $dateRange[$date->format('Y-m-d')] = [];
+                                    }
+                                    
+                                    // Group tours by date
+                                    foreach ($lastTours as $tour) {
+                                        $tourDate = Carbon\Carbon::parse($tour->tour_date)->format('Y-m-d');
+                                        if (isset($dateRange[$tourDate])) {
+                                            $dateRange[$tourDate][] = $tour;
+                                        }
+                                    }
+                                    
+                                    // Sort by date in descending order (most recent first)
+                                    krsort($dateRange);
+                                ?>
+
                                 <div class="table-responsive">
                                     <table id="datatable-buttons" class="table table-striped mb-0">
                                         <thead>
@@ -113,19 +136,26 @@
                                                 <th>Date</th>
                                                 <th>Tour Name</th>
                                                 <th>Guide</th>
-                                                <th>Start Time</th>
                                                 <th>End Time</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <?php $__currentLoopData = $lastTours; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $tour): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                                <tr>
-                                                    <td><?php echo e(Carbon\Carbon::parse($tour->tour_date)->format('Y-m-d')); ?></td>
-                                                    <td><?php echo e($tour->tour_name); ?></td>
-                                                    <td><?php echo e($tour->guide); ?></td>
-                                                    <td><?php echo e(Carbon\Carbon::parse($tour->start_time)); ?></td>
-                                                    <td><?php echo e(Carbon\Carbon::parse($tour->end_time)); ?></td>
-                                                </tr>
+                                            <?php $__currentLoopData = $dateRange; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $date => $tours): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                <?php if(count($tours) > 0): ?>
+                                                    <?php $__currentLoopData = $tours; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $tour): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                        <tr>
+                                                            <td><?php echo e(Carbon\Carbon::parse($tour->tour_date)->format('d/m/Y')); ?></td>
+                                                            <td><?php echo e($tour->tour_name); ?></td>
+                                                            <td><?php echo e($tour->guide); ?></td>
+                                                            <td><?php echo e(Carbon\Carbon::parse($tour->end_time)->format('d/m/Y H:i:s')); ?></td>
+                                                        </tr>
+                                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                                <?php else: ?>
+                                                    <tr>
+                                                        <td><?php echo e(Carbon\Carbon::parse($date)->format('d/m/Y')); ?></td>
+                                                        <td colspan="3" class="text-center text-muted">No tours available</td>
+                                                    </tr>
+                                                <?php endif; ?>
                                             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                         </tbody>
                                     </table>
@@ -167,6 +197,6 @@
         
     <?php $__env->stopSection(); ?>
 
-   
+
 
 <?php echo $__env->make('partials.main', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /home/nordpzbm/hr.nordictravels.tech/resources/views/fetch-events.blade.php ENDPATH**/ ?>

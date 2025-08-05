@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\EventSalary;
 use App\Models\Holiday;
+use App\Models\ManagerGuideAssignment;
 use App\Models\MissingHours;
 use App\Models\TourGuide;
 use Illuminate\Http\Request;
@@ -17,6 +18,16 @@ class MissingHoursController extends Controller
     {
         $guides = TourGuide::where('is_hidden', false)->orderBy('name', 'asc')->get();
         $missingHours = MissingHours::orderBy('created_at', 'desc')->get();
+        return view('missing-hours.manage-missing-hours', compact('guides', 'missingHours'));
+    }
+
+
+    public function teamleadManageMissingHours()
+    {
+        $assignedGuideIds = ManagerGuideAssignment::where('manager_id', auth()->id())->pluck('guide_id')->toArray();
+
+        $guides = TourGuide::where('is_hidden', false)->whereIn('id', $assignedGuideIds)->orderBy('name', 'asc')->get();
+        $missingHours = MissingHours::whereIn('guide_id', $assignedGuideIds)->orderBy('created_at', 'desc')->get();
         return view('missing-hours.manage-missing-hours', compact('guides', 'missingHours'));
     }
 
@@ -100,8 +111,12 @@ class MissingHoursController extends Controller
 
         //first we have to create an event, if it doesn't exist
         $startDate = $request->applied_at . '-01';
-        $eventName = $guide->name . ' - missing hours ' . $request->applied_at;
+        // $eventName = $guide->name . ' - missing hours ' . $request->applied_at;
         
+        $monthYear = Carbon::parse($request->start_time)->format('F Y');
+        $eventName = $guide->name . ' - Missing hours from ' . $monthYear;
+
+
         // Check if event already exists
         $event = Event::where('name', $eventName)
             ->where('start_time', $startDate)

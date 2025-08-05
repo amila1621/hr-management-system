@@ -53,6 +53,20 @@
                             <form action="{{ route('receipts.store') }}" method="POST" enctype="multipart/form-data">
                                 @csrf
                                 
+                                @if(isset($employees) && count($employees) > 0)
+                                <div class="form-group">
+                                    <label for="employee_id">Select Employee</label>
+                                    <select class="form-control" id="employee_id" name="employee_id">
+                                        @foreach($employees as $employee)
+                                            <option value="{{ $employee['id'] }}" {{ auth()->id() == $employee['id'] ? 'selected' : '' }}>
+                                                {{ $employee['name'] }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <small class="form-text text-muted">Select the employee for whom you're submitting this receipt</small>
+                                </div>
+                                @endif
+                                
                                 <div class="form-group">
                                     <label for="receipt">Receipt Image <span class="text-danger">*</span></label>
                                     <div class="custom-file">
@@ -62,6 +76,18 @@
                                     <small class="form-text text-muted">Accepted formats: JPG, PNG, GIF. Max size: 2MB</small>
                                 </div>
 
+                                <div class="form-group">
+                                    <label for="amount">Amount <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="amount" name="amount" placeholder="" required value="{{ old('amount') }}">
+                                    <small class="form-text text-muted">Enter the amount to be reimbursed. Eg: Reimburse 50</small>
+                                </div>
+                                
+                                <!-- <div class="form-group">
+                                    <label for="applied_month">Applied Month</label>
+                                    <input type="month" class="form-control" id="applied_month" name="applied_month" value="{{ old('applied_month') }}">
+                                    <small class="form-text text-muted">Select the month this receipt applies to</small>
+                                </div> -->
+                               
                                 <div class="form-group">
                                     <label for="note">Note</label>
                                     <textarea class="form-control" id="note" name="note" rows="4" placeholder="Enter any additional notes here...">{{ old('note') }}</textarea>

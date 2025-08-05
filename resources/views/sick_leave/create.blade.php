@@ -79,14 +79,15 @@
                                         <input type="text" 
                                                name="datetime_range" 
                                                class="form-control" 
-                                               id="datetime_range" 
+                                               id="datetime_range"
+                                               autocomplete="off"
                                                placeholder="Select date and time range"
                                                required>
                                         <input type="hidden" name="start_time" id="start_time">
                                         <input type="hidden" name="end_time" id="end_time">
                                     </div>
 
-                                    <button type="submit" class="btn btn-primary waves-effect waves-light">Create Missing Hours</button>
+                                    <button type="submit" class="btn btn-primary waves-effect waves-light">Create Sick Leave Hours</button>
                                 </form>
                             </div>
                         </div>
@@ -134,6 +135,8 @@ $(function() {
         timePicker: true,
         timePicker24Hour: true,
         autoUpdateInput: false,
+        startDate: moment().set({ hour: 10, minute: 0 }),
+        endDate: moment().set({ hour: 15, minute: 0 }),
         locale: {
             format: 'YYYY-MM-DD HH:mm',
             cancelLabel: 'Clear'

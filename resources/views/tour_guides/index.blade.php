@@ -59,6 +59,7 @@
                                         <thead>
                                             <tr>
                                                 <th>Name</th>
+                                                <th>Full Name</th>
                                                 <th>Email</th>
                                                 <th>Phone Number</th>
                                                 <th>Note</th>
@@ -72,6 +73,7 @@
                                             @foreach ($tourGuides as $tourGuide)
                                                 <tr>
                                                     <td>{{ $tourGuide->name }}</td>
+                                                    <td>{{ $tourGuide->full_name }}</td>
                                                     <td>{{ $tourGuide->email }}</td>
                                                     <td>{{ $tourGuide->phone_number }}</td>
                                                     <td>{{ $tourGuide->rate }}</td>
@@ -115,6 +117,7 @@
                                                                 onclick="return confirm('Are you sure you want to delete this tour guide?')">Delete</button>
                                                         </form>
 
+
                                                         <!-- Change Password Button -->
                                                         <button type="button" class="btn btn-sm btn-warning"
                                                             data-toggle="modal"
@@ -139,8 +142,27 @@
                                                                 onclick="return confirm('Are you sure you want to unhide this tour guide?')">Unhide</button>
                                                         </form>
                                                         @endif
-                                                        
 
+                                                        
+                                                        <form action="{{ route('tour-guides.terminate', $tourGuide->id) }}"
+                                                            method="POST" style="display:inline-block;">
+                                                            @csrf
+                                                            @method('POST')
+                                                            <button type="submit" class="btn btn-sm btn-danger"
+                                                                onclick="return confirm('Are you sure you want to Terminate this tour guide?')">Terminate</button>
+                                                        </form>
+
+                                                        <!-- Make a Guide/Staff Button -->
+                                                        @php
+                                                            $isAlreadyStaff = \App\Models\StaffUser::where('user_id', $tourGuide->user_id)->exists();
+                                                        @endphp
+                                                        @if(!$isAlreadyStaff)
+                                                        <button type="button" class="btn btn-sm btn-success"
+                                                            data-toggle="modal"
+                                                            data-target="#makeGuideStaffModal{{ $tourGuide->id }}">
+                                                            Make a Guide/Staff
+                                                        </button>
+                                                        @endif
                                                     </td>
                                                 </tr>
 
@@ -184,7 +206,54 @@
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <!-- End of Modal -->
+                                                <!-- End of Change Password Modal -->
+
+                                                <!-- Make a Guide/Staff Modal -->
+                                                @if(!$isAlreadyStaff)
+                                                <div class="modal fade" id="makeGuideStaffModal{{ $tourGuide->id }}"
+                                                    tabindex="-1" role="dialog"
+                                                    aria-labelledby="makeGuideStaffModalLabel{{ $tourGuide->id }}"
+                                                    aria-hidden="true">
+                                                    <div class="modal-dialog" role="document">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title"
+                                                                    id="makeGuideStaffModalLabel{{ $tourGuide->id }}">
+                                                                    Make {{ $tourGuide->name }} a Guide/Staff</h5>
+                                                                <button type="button" class="close" data-dismiss="modal"
+                                                                    aria-label="Close">
+                                                                    <span aria-hidden="true">&times;</span>
+                                                                </button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <form action="{{ route('tour-guides.make-guide-staff', $tourGuide->id) }}" method="POST">
+                                                                    @csrf
+                                                                    @method('PUT')
+                                                                    <div class="form-group">
+                                                                        <label for="department_id">Department</label>
+                                                                        <select name="department_id" class="form-control" required>
+                                                                            @php
+                                                                                $departments = \App\Models\Departments::all();
+                                                                            @endphp
+                                                                            <option value="">Select Department</option>
+                                                                            @foreach ($departments as $department)
+                                                                                <option value="{{ $department->id }}">
+                                                                                    {{ $department->department }}
+                                                                                </option>
+                                                                            @endforeach
+                                                                        </select>
+                                                                    </div>
+                                                                    <input type="hidden" name="tour_guide_id" value="{{ $tourGuide->id }}">
+                                                                    <button type="submit" class="btn btn-success">
+                                                                        Make Guide/Staff
+                                                                    </button>
+                                                                </form>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                @endif
+                                                <!-- End of Make a Guide/Staff Modal -->
                                             @endforeach
                                         </tbody>
                                     </table>

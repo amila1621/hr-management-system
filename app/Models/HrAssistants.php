@@ -11,7 +11,7 @@ class HrAssistants extends Model
 
     protected $table = 'hr_assistant';
 
-    protected $fillable = ['name', 'email', 'phone_number', 'rate', 'color', 'user_id'];
+    protected $fillable = ['name', 'email', 'phone_number', 'rate', 'color', 'user_id','allow_report_hours'];
 
     public function user()
     {

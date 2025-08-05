@@ -22,9 +22,9 @@
                                         <a href="javascript:void(0);">Home</a>
                                     </li>
                                     <li class="breadcrumb-item">
-                                        <a href="javascript:void(0);">Operations</a>
+                                        <a href="javascript:void(0);">Bus Driver Supervisors</a>
                                     </li>
-                                    <li class="breadcrumb-item active">View Operations</li>
+                                    <li class="breadcrumb-item active">View Bus Driver Supervisors</li>
                                 </ol>
                             </div>
                         </div>
@@ -50,7 +50,7 @@
                     <div class="col-12">
                         <div class="card">
                             <div class="card-body">
-                                <h4 class="mt-0 header-title">Team Leads</h4>
+                                <h4 class="mt-0 header-title">Bus Driver Supervisors</h4>
 
                                 <div class="table-responsive">
                                     <table id="datatable-buttons"
@@ -64,6 +64,7 @@
                                                 <th>Rate</th>
                                                 <th>Color</th>
                                                 <th>Intern Status</th>
+                                                <th>Allow Report Hours</th>
                                                 <th>Action</th>
                                             </tr>
                                         </thead>
@@ -76,6 +77,7 @@
                                                     <td><?php echo e($teamLead->teamLead->rate); ?></td>
                                                     <td><?php echo e($teamLead->teamLead->color); ?></td>
                                                     <td><?php echo e($teamLead->is_intern ? 'Yes' : 'No'); ?></td>
+                                                    <td><?php echo e($teamLead->teamLead->allow_report_hours ? 'Yes' : 'No'); ?></td>
                                                     <td>
                                                         <a href="<?php echo e(route('team-leads.edit', $teamLead->id)); ?>"
                                                             class="btn btn-sm btn-primary">Edit</a>

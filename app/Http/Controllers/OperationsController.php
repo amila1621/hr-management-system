@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\OperationsDayTours;
+use App\Models\OperationsProcessTours;
 use App\Models\Vehicles;
+use App\Models\TourGuide; 
 use Illuminate\Http\Request;
 use Carbon\Carbon;
-use App\Models\OperationsProcessTours;
 use Spatie\GoogleCalendar\Event;
 use GuzzleHttp\Client;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class OperationsController extends Controller
@@ -20,26 +22,21 @@ class OperationsController extends Controller
     public function processEventInternally($eventId)
     {
         try {
-            // Fetch the event details from operations_process_tours
+            Log::info('Processing event', ['event_id' => $eventId]);
+            
             $event = OperationsProcessTours::findOrFail($eventId);
-
-            // Get the event description
-            $description = $event->description;
-
-            // Use the existing getResponse method but simulate a request
-            $simulatedRequest = new Request(['description' => $description]);
+            $simulatedRequest = new Request(['description' => $event->description]);
             $response = $this->getResponse($simulatedRequest);
-
-            // Convert the response to array
-            $eventData = json_decode($response->getContent(), true);
-
-
+            
             return [
                 'success' => true,
-                'data' => $eventData
+                'data' => json_decode($response->getContent(), true)
             ];
         } catch (\Exception $e) {
-            // Return error as array instead of JSON response
+            Log::error('Event processing failed', [
+                'event_id' => $eventId,
+                'error' => $e->getMessage()
+            ]);
             return [
                 'success' => false,
                 'message' => $e->getMessage()
@@ -50,52 +47,42 @@ class OperationsController extends Controller
     public function getResponse(Request $request)
     {
         set_time_limit(120);
-        $description = $request->input('description');
-
         try {
-
-            $client = new Client([
-                'timeout' => 120,  // Guzzle timeout also set to 120 seconds
-                'connect_timeout' => 120
-            ]);
-
-
+            $description = $request->input('description');
             $response = $this->makeOpenAIRequest($description);
-
             $formattedResponse = $this->processAPIResponse($response);
 
             if (!$this->validateResponse($formattedResponse)) {
-                throw new \Exception('Invalid response format received from API');
+                throw new \Exception('Invalid response format from API');
             }
 
-            $cleanedResponse = $this->cleanPrefixes($formattedResponse);
-            return response()->json($cleanedResponse);
+            return response()->json($formattedResponse);
         } catch (\Exception $e) {
-            Log::error('Event processing error: ' . $e->getMessage());
+            Log::error('Response processing error', ['error' => $e->getMessage()]);
             return response()->json([
                 'error' => 'Failed to process event data: ' . $e->getMessage()
             ], 500);
         }
     }
 
-
     private function makeOpenAIRequest($description)
-    {
-        $client = new Client();
+{
+    try {
+        $client = new Client([
+            'timeout' => 120,
+            'connect_timeout' => 120
+        ]);
 
         $response = $client->post('https://api.anthropic.com/v1/messages', [
             'headers' => [
                 'x-api-key' => env('CLAUDE_API_KEY'),
                 'anthropic-version' => '2023-06-01',
-                'Content-Type'  => 'application/json',
+                'Content-Type' => 'application/json',
             ],
             'json' => [
                 'model' => self::MODEL,
                 'messages' => [
-                    [
-                        'role' => 'user',
-                        'content' => $description
-                    ]
+                    ['role' => 'user', 'content' => $description]
                 ],
                 'system' => $this->getSystemPrompt(),
                 'temperature' => self::TEMPERATURE,
@@ -103,505 +90,161 @@ class OperationsController extends Controller
             ],
         ]);
 
-        return $response;
+        // Parse the JSON response
+        $responseData = json_decode($response->getBody()->getContents(), true);
+        
+        // Return the content from the first message
+        if (isset($responseData['content']) && is_array($responseData['content'])) {
+            return $responseData['content'];
+        }
+
+        throw new \Exception('Invalid API response structure');
+    } catch (\Exception $e) {
+        Log::error('API Request Error', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        throw new \Exception('Failed to make API request: ' . $e->getMessage());
     }
+}
 
     private function getSystemPrompt()
     {
         return <<<EOT
-You are a tour event data extraction system. Your primary task is to extract and structure detailed event information from tour descriptions.
+You are a tour event data extraction system analyzing event descriptions. Extract information in this exact format:
 
-CRITICAL PREFIX RULES (HIGHEST PRIORITY):
-1. ONLY process people as guides if their name has "G-" or "g-" prefix
-2. ONLY process people as helpers if their name has "H-" or "h-" prefix
-3. STRICTLY IGNORE any person without these exact prefixes
-4. If a name appears in the text without G- or H- prefix, DO NOT include them in guides or helpers
-5. Words like "helps", "assists", "support" DO NOT make someone a helper - only the H- prefix does
-
-Example:
-- "G-John helps with bus" -> Include as GUIDE (has G- prefix)
-- "H-Mary helps with pickup" -> Include as helper (has H- prefix)
-- "Mikhail helps with bus" -> IGNORE (no prefix)
-- "Peter assists with pickup" -> IGNORE (no prefix)
-- "Sarah helps guides" -> IGNORE (no prefix)
-
-CRITICAL REQUIREMENTS:
-1. You MUST always output valid JSON matching the exact structure specified
-2. All required fields MUST be present, even if empty
-3. For large descriptions, ensure complete processing of all data
-4. Never truncate or omit required fields
-5. Always validate JSON structure before responding
-
-Follow these exact rules for data extraction:
-
-1. EVENT INFORMATION
-Extract:
-- Event type (D/N/X/Z prefix)
-- Full event name
-- Date
-- Duration
-- Status (active/cancelled)
-
-2. GUIDE INFORMATION
-For names prefixed with "G-" or "g-":
-- Extract name (remove prefix)
-- Match with vehicle details
-- Find earliest pickup time
-- Collect all pickup locations
-- Group all associated pax details
-
-3. HELPER INFORMATION
-For names prefixed with "H-" or "h-":
-- Extract name (remove prefix)
-- Match with vehicle details
-- Extract assigned tasks
-
-4. VEHICLE DETAILS
-Extract:
-- Registration number
-- Total pax count:
-  CRITICAL: For each line with "pax paid by":
-  1. Extract first number before "+"
-  2. Add to running total
-  3. Include ALL entries for the guide
-  4. Double-check sum before output
-- Type if specified
-- Current assignment (guide/helper)
-
-5. TIMING INFORMATION
-Extract:
-- Earliest pickup time per guide
-- All pickup locations (remove P- prefix)
-- Office time
-- Activity schedules
-- Duration details
-
-6. SPECIAL REQUIREMENTS
-Extract:
-- Dietary restrictions
-- Language requirements
-- Mobility needs
-- Special equipment needs
-- Transfer requirements
-
-Required Output Structure:
+Required Structure:
 {
     "event_info": {
-        "type": "string", // D/N/X/Z
-        "name": "string",
-        "date": "YYYY-MM-DD",
-        "duration": "string",
-        "status": "string" // active/cancelled
+        "tour_name": "string",
+        "tour_date": "YYYY-MM-DD",
+        "duration": "string (from *office time)"
     },
     "guides": {
         "guide_name": {
             "vehicle": {
-                "registration": "string",
-                "pax": "integer"
+                "registration": "string (after / in guide line)",
+                "pax": integer (sum of first numbers in X+Y+Z format)
             },
-            "pickup_time": "HH:mm",
-            "pickup_location": "string",
+            "pickup_time": "HH:mm (earliest pickup time)",
+            "pickup_location": "string (after P-)",
+            "available": "string (from remarks)",
+            "remark": "string (all * lines)"
         }
-    },
-    "helpers": [
-        {
-            "name": "string",
-            "vehicle": {
-                "registration": "string",
-                "pax": "integer"
-            },
-            "task": "string"
-        }
-    ],
-    "office_time": "HH:mm",
-    "additional_notes": ["string"],
-    "special_requirements": ["string"]
+    }
 }
 
-Example Input 1:
-Event: D Trip to Santa Claus Village
-Start: 2024-10-10 00:00:00
-Description:
-G-Teodora / LZP 974 (8 Seats)
-1+0+0 pax paid by NUT / 09:00 / P-Aurora Nest / John Smith / +1234567890
-3+0+0 pax paid by NUT / 09:00 / P-Aurora Nest / Jane Smith / +1234567890
+Rules:
+1. GUIDES: Only extract lines starting with G- (ignore H- or other prefixes)
+2. VEHICLES: Extract registration after the / in guide line
+3. LOCATIONS: Only use locations with P- prefix, remove P- in output
+4. PAX: For patterns like "4+0+0", only use first number
+5. TIME: Use 24-hour format (HH:mm)
+6. REMARKS: Combine all lines starting with * (remove *)
+7. DURATION: Get from *office time mentions
+
+Example Input:
+"20.01.2025
+G-Alissa /MOF 008 (8 Seats)
+4+0+0 pax paid by EV / 10:00 / P-Office
 *office 10:00
-*Santa Reindeer Visit - 10:30
+*lunch at christmas house 12:00"
 
-Example Output 1:
+Example Output:
 {
     "event_info": {
-        "type": "D",
-        "name": "Trip to Santa Claus Village",
-        "date": "2024-10-10",
-        "duration": "1 day",
-        "status": "active"
+        "tour_date": "2025-01-20",
+        "duration": "10:00"
     },
     "guides": {
-        "Teodora": {
+        "Alissa": {
             "vehicle": {
-                "registration": "LZP 974",
-                "pax": "4"
+                "registration": "MOF 008",
+                "pax": 4
             },
-            "pickup_time": "09:00",
-            "pickup_location": "Aurora Nest",
-        }
-    },
-    "helpers": [],
-    "office_time": "10:00",
-    "additional_notes": ["Santa Reindeer Visit - 10:30"],
-    "special_requirements": []
-}
-
-Example Input 2:
-Event: N Hunting Northern Lights
-Start: 2024-10-10 00:00:00
-Description:
-G-Isaac / AZE 379 (8 Seats)
-2+0+0 pax paid by LINK / 20:50 / P-Office / Jane Doe / +9876543210 / *vegetarian
-H-Kevin / Help with equipment
-*office 21:00
-
-Example Output 2:
-{
-    "event_info": {
-        "type": "N",
-        "name": "Hunting Northern Lights",
-        "date": "2024-10-10",
-        "duration": "1 day",
-        "status": "active"
-    },
-    "guides": {
-        "Isaac": {
-            "vehicle": {
-                "registration": "AZE 379",
-                "pax": "2"
-            },
-            "pickup_time": "20:50",
+            "pickup_time": "10:00",
             "pickup_location": "Office",
-            
+            "available": "12:00",
+            "remark": "office 10:00, lunch at christmas house 12:00"
         }
-    },
-    "helpers": [
-        {
-            "name": "Kevin",
-            "vehicle": null,
-            "task": "Help with equipment"
-        }
-    ],
-    "office_time": "21:00",
-    "additional_notes": [],
-    "special_requirements": ["vegetarian"]
+    }
 }
 
-Important Rules:
-1. PREFIX RULE IS ABSOLUTE - No exceptions for any reason
-2. Remove prefixes in the final output
-3. Keep only the earliest pickup time for each guide
-4. Include all special requirements and notes
-5. Maintain original vehicle registration numbers
-6. Process all customer contact information
-7. Include payment sources
-8. Mark cancelled events (X prefix) in status
-9. Process internal tasks (Z prefix) appropriately
-10. Track all dietary and language requirements
-11. The word "helps" or similar words DO NOT make someone a helper
-12. PAX COUNTING MUST BE PRECISE - Add all individual pax numbers for accurate total
-13. Each pax entry must be counted separately and summed for the final total
-14. Double-check pax sums before including in response
-
-Extract ALL available information, but NEVER include people without proper prefixes in guides or helpers sections, even if they are described as helping.
-
-PAX COUNTING RULES (HIGHEST PRIORITY):
-1. ALWAYS count each pax entry separately
-2. For each line containing "pax paid by", extract the numbers before "+":
-   - Format is always "X+Y+Z pax paid by"
-   - Add the first number (X) to the total
-3. Sum ALL numbers for final total
-4. Verify count by listing each number found:
-   Example:
-   1+0+0 → add 1
-   2+0+0 → add 2
-   1+0+0 → add 1
-   Total = 1 + 2 + 1 = 4
-
-4. VEHICLE DETAILS
-Extract:
-- Registration number
-- Total pax count:
-  CRITICAL: For each line with "pax paid by":
-  1. Extract first number before "+"
-  2. Add to running total
-  3. Include ALL entries for the guide
-  4. Double-check sum before output
-- Type if specified
-- Current assignment (guide/helper)
-
-Example pax counting:
-Input:
-G-John / ABC 123
-1+0+0 pax paid by CARD / pickup1
-2+0+0 pax paid by CASH / pickup2
-1+0+0 pax paid by LINK / pickup3
-
-Must calculate:
-Line 1: 1 (from 1+0+0)
-Line 2: 2 (from 2+0+0)
-Line 3: 1 (from 1+0+0)
-Total = 1 + 2 + 1 = 4
-
-Result should show:
-"pax": "4"
-
-FINAL VERIFICATION STEPS:
-1. Count every line with "pax paid by"
-2. Extract first number before "+" from each line
-3. Sum all numbers
-4. Verify total matches pax count in output
+Important:
+- Only include guides with G- prefix
+- Only include locations with P- prefix
+- Sum all pax numbers for each guide
+- Include all remarks starting with *
 EOT;
     }
 
-    private function processAPIResponse($response)
-    {
-        try {
-            // Get response body
-            $body = $response->getBody()->getContents();
-
-            // First level decode
-            $data = json_decode($body, true);
-
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new \Exception('Failed to decode response body: ' . json_last_error_msg());
-            }
-
-            // Extract the JSON string from the text field
-            if (!isset($data['content'][0]['text'])) {
-                throw new \Exception('Invalid response structure');
-            }
-
-            $text = $data['content'][0]['text'];
-
-            // Extract JSON data from the text by finding the first '{' and last '}'
-            $start = strpos($text, '{');
-            $end = strrpos($text, '}');
-
-            if ($start === false || $end === false) {
-                throw new \Exception('Could not find valid JSON in response');
-            }
-
-            $jsonStr = substr($text, $start, $end - $start + 1);
-
-            // Second level decode - the actual event data
-            $eventData = json_decode($jsonStr, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new \Exception('Failed to decode event data: ' . json_last_error_msg());
-            }
-
-
-            // Process guides
-            if (isset($eventData['guides'])) {
-                $processedGuides = [];
-                foreach ($eventData['guides'] as $name => $details) {
-                    $processedGuides[$name] = !empty($details) ? $details : [
-                        'vehicle' => null,
-                        'pickup_time' => null,
-                        'pickup_location' => null
-                    ];
-                }
-                $eventData['guides'] = $processedGuides;
-            }
-
-            // Process helpers
-            if (isset($eventData['helpers']) && is_array($eventData['helpers'])) {
-                $processedHelpers = [];
-                foreach ($eventData['helpers'] as $helper) {
-                    if (isset($helper['name'])) {
-                        $processedHelpers[] = $helper;
-                    }
-                }
-                $eventData['helpers'] = $processedHelpers;
-            }
-
-            return $eventData;
-        } catch (\Exception $e) {
-            Log::error('API Response Processing Error: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
-            ]);
-            throw $e;
-        }
-    }
-
-    private function cleanPrefixes($formattedResponse)
-    {
-        // Clean guide names and their data
-        $cleanedGuides = [];
-        foreach ($formattedResponse['guides'] as $guideName => $details) {
-            $cleanName = preg_replace('/^[Gg]-/', '', $guideName);
-
-            // Clean pickup locations
-            $details['pickup_location'] = preg_replace('/^[Pp]-/', '', $details['pickup_location']);
-
-            // Clean vehicle details if needed
-            if (isset($details['vehicle']['registration'])) {
-                $details['vehicle']['registration'] = trim($details['vehicle']['registration']);
-            }
-
-            // Clean pax details
-            if (isset($details['pax_details'])) {
-                foreach ($details['pax_details'] as &$pax) {
-                    if (isset($pax['pickup_location'])) {
-                        $pax['pickup_location'] = preg_replace('/^[Pp]-/', '', $pax['pickup_location']);
-                    }
-                }
-            }
-
-            $cleanedGuides[$cleanName] = $details;
-        }
-        $formattedResponse['guides'] = $cleanedGuides;
-
-        // Clean helper names
-        if (isset($formattedResponse['helpers']) && is_array($formattedResponse['helpers'])) {
-            $formattedResponse['helpers'] = array_map(function ($helper) {
-                $helper['name'] = preg_replace('/^[Hh]-/', '', $helper['name']);
-                if (isset($helper['vehicle']) && isset($helper['vehicle']['registration'])) {
-                    $helper['vehicle']['registration'] = trim($helper['vehicle']['registration']);
-                }
-                return $helper;
-            }, $formattedResponse['helpers']);
-        }
-
-        return $formattedResponse;
-    }
-
-    private function validateResponse($response)
-    {
-        if (!is_array($response)) {
-            Log::error('Response is not an array:', ['response' => $response]);
-            return false;
-        }
-
-        $requiredKeys = ['event_info', 'guides', 'helpers', 'office_time'];
-        foreach ($requiredKeys as $key) {
-            if (!array_key_exists($key, $response)) {
-                Log::error("Missing required key in response: $key", ['response' => $response]);
-                return false;
-            }
-        }
-
-        // Validate event_info
-        $eventRequired = ['type', 'name', 'date', 'duration', 'status'];
-        foreach ($eventRequired as $field) {
-            if (!isset($response['event_info'][$field])) {
-                Log::error("Missing required event_info field: $field", ['event_info' => $response['event_info'] ?? null]);
-                return false;
-            }
-        }
-
-        // Validate guides structure
-        foreach ($response['guides'] as $guide => $details) {
-            if (empty($details)) {
-                $response['guides'][$guide] = [
-                    'vehicle' => null,
-                    'pickup_time' => '',
-                    'pickup_location' => ''
-                ];
-                continue;
-            }
-        }
-
-        return true;
-    }
-
-
     public function fetchEvents(Request $request)
     {
-        $calendarId = env('GOOGLE_CALENDAR_ID');
+        try {
+            $startDateTime = Carbon::today()->startOfDay();
+            $endDateTime = Carbon::today()->endOfDay();
+            $tourDate = Carbon::today()->format('Y-m-d');
 
-        // Set date range to today
-        $startDateTime = Carbon::today()->startOfDay();
-        $endDateTime = Carbon::today()->endOfDay();
+            $googleEvents = Event::get($startDateTime, $endDateTime, [], env('GOOGLE_CALENDAR_ID'));
+            $ignorePrefixes = ['EV', 'TL', 'DR', 'LINK', 'VP', 'TM', 'TR', 'MT', 'X', 'DJ'];
+            $fetchedEventIds = [];
 
-        $tourDate = Carbon::today()->format('d.m.Y');
-
-        // Adjust endDateTime to exclude the next day
-        $adjustedEndDateTime = $endDateTime->copy()->subSecond();
-
-        // Fetch Google events
-        $googleEvents = Event::get($startDateTime, $adjustedEndDateTime, [], $calendarId);
-
-        $ignorePrefixes = ['EV', 'TL', 'DR', 'LINK', 'VP', 'TM', 'TR', 'MT', 'X', 'DJ'];
-        $fetchedEventIds = [];
-
-        foreach ($googleEvents as $googleEvent) {
-            $eventStartTime = $googleEvent->startDateTime ?? $googleEvent->startDate;
-
-            // Skip events with ignored prefixes
-            $skipEvent = false;
-            foreach ($ignorePrefixes as $prefix) {
-                if (stripos($googleEvent->name, $prefix . ' ') === 0) {
-                    $skipEvent = true;
-                    break;
+            foreach ($googleEvents as $googleEvent) {
+                if ($this->shouldSkipEvent($googleEvent, $ignorePrefixes)) {
+                    OperationsProcessTours::where('event_id', $googleEvent->id)->delete();
+                    continue;
                 }
+
+                $description = $this->processEventDescription($googleEvent->description);
+                $this->updateOrCreateProcessTour($googleEvent, $description, $tourDate);
+                $fetchedEventIds[] = $googleEvent->id;
             }
 
-            if ($skipEvent) {
-                // Delete from operations_process_tours if exists
-                OperationsProcessTours::where('event_id', $googleEvent->id)->delete();
-                continue;
-            }
+            OperationsProcessTours::whereNotIn('event_id', $fetchedEventIds)->delete();
+            $this->createSheet();
+            $this->updateTourDurations();
 
-            // Store the original description without modifications
-            $originalDescription = $googleEvent->description;
-
-            // Process the description to make it more readable
-            $description = $originalDescription;
-            $description = html_entity_decode($description);
-
-            // Replace common HTML tags with readable alternatives
-            $description = str_replace(['<br>', '<br/>', '<br />'], "\n", $description);
-            $description = str_replace(['<p>', '</p>'], "\n", $description);
-            $description = str_replace(['<b>', '</b>', '<strong>', '</strong>'], "", $description);
-            $description = str_replace(['<i>', '</i>', '<em>', '</em>'], "", $description);
-            $description = str_replace(['&nbsp;'], " ", $description);
-
-            // Remove any remaining HTML tags
-            $description = strip_tags($description);
-
-            // Clean up extra whitespace and line breaks
-            $description = preg_replace('/\n\s+/', "\n", $description); // Remove spaces at start of lines
-            $description = preg_replace('/[ \t]+/', ' ', $description); // Replace multiple spaces with single space
-            $description = preg_replace('/\n{3,}/', "\n\n", $description); // Replace multiple line breaks with double line break
-            $description = trim($description); // Remove leading and trailing whitespace
-
-            // Check if the event exists and if descriptions have changed
-            $processTour = OperationsProcessTours::where('event_id', $googleEvent->id)->first();
-            $descriptionChanged = !$processTour ||
-                $processTour->original_description !== $originalDescription ||
-                $processTour->description !== $description ||
-                $processTour->tour_name !== $googleEvent->name;
-
-            if (!$processTour || $descriptionChanged) {
-                $processTour = OperationsProcessTours::updateOrCreate(
-                    ['event_id' => $googleEvent->id],
-                    [
-                        'tour_name' => $googleEvent->name,
-                        'tour_date' => $tourDate,
-                        'description' => $description,
-                        'original_description' => $originalDescription,
-                        'status' => 0 // Reset status when content changes
-                    ]
-                );
-            }
-
-            // Add the processed event ID to the fetchedEventIds array
-            $fetchedEventIds[] = $googleEvent->id;
+            return response()->json(['message' => 'Events processed successfully']);
+        } catch (\Exception $e) {
+            Log::error('Error fetching events', ['error' => $e->getMessage()]);
+            return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
 
-        // Delete local records that are no longer in Google Calendar
-        OperationsProcessTours::whereNotIn('event_id', $fetchedEventIds)->delete();
+    private function shouldSkipEvent($event, $ignorePrefixes)
+    {
+        foreach ($ignorePrefixes as $prefix) {
+            if (stripos($event->name, $prefix . ' ') === 0) {
+                return true;
+            }
+        }
+        return false;
+    }
 
-        $this->createSheet();
-        // return redirect()->route('vehicles.index')->with('success', 'Tour descriptions updated successfully.');
+    private function processEventDescription($description)
+    {
+        $description = html_entity_decode($description);
+        $description = str_replace(['<br>', '<br/>', '<br />', '<p>', '</p>'], "\n", $description);
+        $description = str_replace(['<b>', '</b>', '<strong>', '</strong>', '<i>', '</i>'], '', $description);
+        $description = strip_tags($description);
+        $description = preg_replace('/\n\s+/', "\n", $description);
+        $description = preg_replace('/[ \t]+/', ' ', $description);
+        $description = preg_replace('/\n{3,}/', "\n\n", $description);
+        return trim($description);
+    }
+
+    private function updateOrCreateProcessTour($event, $description, $tourDate)
+    {
+        return OperationsProcessTours::updateOrCreate(
+            ['event_id' => $event->id],
+            [
+                'tour_name' => $event->name,
+                'tour_date' => $tourDate,
+                'description' => $description,
+                'original_description' => $event->description,
+                'status' => 0
+            ]
+        );
     }
 
     public function createSheet()
@@ -611,148 +254,496 @@ EOT;
         foreach ($events as $event) {
             try {
                 $eventData = $this->processEventInternally($event->id);
-                $event = OperationsProcessTours::find($event->id);
+                
 
-                // Check if event_info exists in the response
-                if (!isset($eventData['data']['event_info'])) {
-                    // Try to extract any available guides from the data
-                    $guides = $eventData['data']['guides'] ?? [];
-                    
-                    if (!empty($guides)) {
-                        // If we have guides, create entries for each one with available data
-                        foreach ($guides as $guideName => $guide) {
-                            OperationsDayTours::updateOrCreate(
-                                [
-                                    'event_id' => $event->id,
-                                    'guide' => $guideName
-                                ],
-                                [
-                                    'tour_name' => $event->tour_name,
-                                    'tour_date' => $event->tour_date,
-                                    'duration' => 0,
-                                    'vehicle' => $guide['vehicle']['registration'] ?? 'NA',
-                                    'pickup_time' => $guide['pickup_time'] ?? 'NA',
-                                    'pickup_location' => $guide['pickup_location'] ?? 'NA',
-                                    'pax' => $guide['vehicle']['pax'] ?? 0,
-                                    'available' => 0,
-                                    'remark' => 'Partial Data Available',
-                                ]
-                            );
-                        }
-                    } else {
-                        // If no guides found, create a single NA entry
-                        OperationsDayTours::updateOrCreate(
-                            [
-                                'event_id' => $event->id,
-                                'guide' => 'NA'
-                            ],
-                            [
-                                'tour_name' => $event->tour_name,
-                                'tour_date' => $event->tour_date,
-                                'duration' => 0,
-                                'vehicle' => 'NA',
-                                'pickup_time' => 'NA',
-                                'pickup_location' => 'NA',
-                                'pax' => 0,
-                                'available' => 0,
-                                'remark' => 'Not Enough Data',
-                            ]
-                        );
-                    }
+                if (!$eventData['success'] || !isset($eventData['data'])) {
+                    throw new \Exception('Invalid event data structure');
                 }
 
-                // Update the status to 1 after successful processing
+                $data = $eventData['data'];
+                
+
+
+
+                // Delete existing entries for this event
+                OperationsDayTours::where('event_id', $event->id)->delete();
+
+                if (isset($data['guides']) && is_array($data['guides']) && !empty($data['guides'])) {
+
+                    foreach ($data['guides'] as $guideName => $guideData) {
+
+                        // Verify guide exists with G- prefix
+                        // Pattern matching both "+G- Name" and "G-Name" formats
+                        if (preg_match('/(^|\s)[+]?G-\s*' . preg_quote($guideName, '/') . '(\s*\/|\s|$)/', $event->description)) {
+                            // Extract office time for duration
+                            $duration = '';
+                    
+                            OperationsDayTours::create([
+                                'event_id' => $event->id,
+                                'tour_date' => $event->tour_date,
+                                'duration' => $duration ?: ($data['event_info']['duration'] ?? 'NA'),
+                                'tour_name' => $event->tour_name,
+                                'vehicle' => $guideData['vehicle']['registration'] ?? 'NA',
+                                'pickup_time' => $guideData['pickup_time'] ?? 'NA',
+                                'pickup_location' => $guideData['pickup_location'] ?? 'NA',
+                                'pax' => $guideData['vehicle']['pax'] ?? 0,
+                                'guide' => $guideName,
+                                'available' => '',
+                                'remark' => $this->formatRemarks($guideData['remark'] ?? '')
+                            ]);
+                        } else {
+                        }
+                    }
+                } else {
+                    $this->createDefaultEntry($event);
+                }
+
                 $event->update(['status' => 1]);
 
             } catch (\Exception $e) {
                 Log::error('Error processing event', [
                     'event_id' => $event->id,
                     'error' => $e->getMessage(),
-                    'eventData' => $eventData ?? null
+                    'trace' => $e->getTraceAsString()
                 ]);
                 
-                // Create entry with NA values for any exception
-                OperationsDayTours::updateOrCreate(
-                    ['event_id' => $event->id],
-                    [
-                        'tour_name' => $event->tour_name,
-                        'tour_date' => $event->tour_date,
-                        'duration' => 0,
-                        'vehicle' => 'NA',
-                        'pickup_time' => 'NA', 
-                        'pickup_location' => 'NA',
-                        'pax' => 0,
-                        'guide' => 'NA',
-                        'available' => 0,
-                        'remark' => 'Error: ' . $e->getMessage(),
-                    ]
-                );
-
-                // Even in case of error, update the status to 1 as we've created an NA entry
+                $this->createErrorEntry($event, $e->getMessage());
                 $event->update(['status' => 1]);
             }
         }
     }
 
 
+    public function updateTourDurations(){
+        $operationsDayTours = OperationsDayTours::where('is_duration_updated', '0')->get();
+        
+        foreach($operationsDayTours as $operationDayTour){
+            $tourName = $operationDayTour->tour_name;   
+            $firstLetter = substr($tourName, 0, 1);
+            $tourNameWithoutPrefix = substr($tourName, 1); // Remove first character
+
+            //then we have to figure out whether this is a day tour or night tour
+            $isDay = false;
+            $isNight = false;
+            
+            if ($firstLetter === 'D') {
+                $isDay = true;
+            } elseif ($firstLetter === 'N') {
+                $isNight = true;
+            } else {
+                $isDay = true;
+            }
+
+            // Search without the D/N prefix
+            $tourDuration = DB::table('tour_durations')->where('tour', $tourNameWithoutPrefix)->first();
+                
+            // If no exact match, try Levenshtein distance matching
+            if (!$tourDuration) {
+                $tourDuration = $this->findTourWithLevenshtein($tourNameWithoutPrefix, 10);
+                if (!$tourDuration) {
+                    $tourDurationTime = 'NA';
+                } else {
+                    $tourDurationTime = $tourDuration->duration;
+                }
+            }
+
+            //have to update available time
+
+            $pickupTime = $operationDayTour->pickup_time;
+            
+            if($pickupTime == 'NA' || $tourDurationTime == 'NA'){
+                $available = 'NA';
+            } else {
+                $pickupTime = Carbon::parse($pickupTime);
+                $available = $pickupTime->addMinutes($tourDurationTime)->format('H:i');
+            }
+
+
+
+            $opDay = OperationsDayTours::find($operationDayTour->id);
+
+            $opDay->duration = $tourDurationTime;
+            $opDay->day_night = $isDay ? 'Day' : 'Night';
+            $opDay->is_duration_updated = 1;
+            $opDay->available = $available;
+            $opDay->save();
+
+        }
+    
+    }
+
+    private function findTourWithLevenshtein($searchTourName, $maxDistance = 3)
+    {
+        // Only remove specific terms in parentheses (FULL) or (no kids)
+        $cleanedSearchName = preg_replace('/\s*\((FULL|no kids)\)/i', '', $searchTourName);
+        // Remove times in format HH:MM
+        $cleanedSearchName = preg_replace('/\s*\d{1,2}:\d{2}\s*/', '', $cleanedSearchName);
+        $cleanedSearchName = preg_replace('/^[NDEX]\s+/', '', $cleanedSearchName); // Remove N, D, E, X prefix
+        $cleanedSearchName = trim($cleanedSearchName); // Remove extra whitespace
+        
+        // Get all tour names from the database
+        $allTours = DB::table('tour_durations')->pluck('tour')->toArray();
+        
+        $bestMatch = null;
+        $shortestDistance = PHP_INT_MAX;
+        
+        foreach ($allTours as $tour) {
+            $distance = levenshtein(strtolower($cleanedSearchName), strtolower($tour));
+            
+            if ($distance < $shortestDistance && $distance <= $maxDistance) {
+                $shortestDistance = $distance;
+                $bestMatch = $tour;
+            }
+        }
+        
+        if ($bestMatch) {
+            return DB::table('tour_durations')->where('tour', $bestMatch)->first();
+        }
+        
+        return null;
+    }
+
+    private function createDefaultEntry($event)
+    {
+        OperationsDayTours::create([
+            'event_id' => $event->id,
+            'tour_date' => Carbon::parse($event->tour_date)->format('Y-m-d'),
+            'duration' => 'NA',
+            'tour_name' => $event->tour_name,
+            'vehicle' => 'NA',
+            'pickup_time' => 'NA',
+            'pickup_location' => 'NA',
+            'pax' => 0,
+            'guide' => 'NA',
+            'available' => '',
+            'remark' => 'No guide information available'
+        ]);
+    }
+
+    private function createErrorEntry($event, $errorMessage)
+    {
+        OperationsDayTours::create([
+            'event_id' => $event->id,
+            'tour_date' => Carbon::parse($event->tour_date)->format('Y-m-d'),
+            'duration' => 'NA',
+            'tour_name' => $event->tour_name,
+            'vehicle' => 'NA',
+            'pickup_time' => 'NA',
+            'pickup_location' => 'NA',
+            'pax' => 0,
+            'guide' => 'NA',
+            'available' => '',
+            'remark' => 'Error: ' . $errorMessage
+        ]);
+    }
+
+    private function formatRemarks($remarks)
+    {
+        if (empty($remarks)) {
+            return '';
+        }
+        
+        if (is_array($remarks)) {
+            $remarks = array_filter($remarks, function($line) {
+                return !empty(trim($line));
+            });
+            return implode("\n", $remarks);
+        }
+        
+        return $remarks;
+    }
+
+    public function apiEvents(Request $request)
+    {
+        try {
+            $date = $request->input('date', Carbon::today()->format('Y-m-d'));
+            
+            $tours = OperationsDayTours::where('tour_date', $date)
+                ->orderBy('pickup_time')
+                ->get()
+                ->groupBy('tour_name')
+                ->map(function ($tourGroup) {
+                    return [
+                        'duration' => $tourGroup->first()->duration ?: '#N/A',
+                        'tour_name' => $tourGroup->first()->tour_name,
+                        'vehicles' => $tourGroup->map(function ($tour) {
+                            return [
+                                'registration' => $tour->vehicle,
+                                'pickup_time' => $tour->pickup_time,
+                                'pickup_location' => $tour->pickup_location,
+                                'pax' => $tour->pax,
+                                'guide' => $tour->guide,
+                                'available' => $tour->available ?: '#N/A',
+                                'remark' => $tour->remark
+                            ];
+                        })->values()->toArray()
+                    ];
+                })->values();
+
+            return response()->json([
+                'success' => true,
+                'data' => $tours
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error in apiEvents', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function validateResponse($response)
+    {
+        if (!is_array($response)) {
+            return false;
+        }
+
+        if (!isset($response['event_info'], $response['guides'])) {
+            return false;
+        }
+
+        foreach ($response['guides'] as $guideName => $guide) {
+            if (!isset($guide['vehicle'], $guide['pickup_time'], $guide['pickup_location'])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+//     private function processAPIResponse($response)
+// {
+//     try {
+//         $body = $response->getBody()->getContents();
+//         $data = json_decode($body, true);
+
+//         if (json_last_error() !== JSON_ERROR_NONE) {
+//             throw new \Exception('Failed to decode API response: ' . json_last_error_msg());
+//         }
+
+//         if (!isset($data['content'][0]['text'])) {
+//             Log::error('Invalid API response structure', ['response' => $data]);
+//             throw new \Exception('Invalid response structure from API');
+//         }
+
+//         $text = $data['content'][0]['text'];
+        
+//         // Find the JSON part in the text
+//         if (preg_match('/\{.*\}/s', $text, $matches)) {
+//             $jsonStr = $matches[0];
+//             $extractedData = json_decode($jsonStr, true);
+            
+//             if (json_last_error() !== JSON_ERROR_NONE) {
+//                 throw new \Exception('Failed to decode extracted data: ' . json_last_error_msg());
+//             }
+
+//             // Validate the structure
+//             if (!isset($extractedData['event_info']) || !isset($extractedData['guides'])) {
+//                 Log::error('Invalid data structure', ['extracted' => $extractedData]);
+//                 throw new \Exception('Invalid data structure in API response');
+//             }
+
+//             return $extractedData;
+//         }
+
+//         throw new \Exception('No valid JSON found in API response');
+//     } catch (\Exception $e) {
+//         Log::error('API Response Processing Error', [
+//             'error' => $e->getMessage(),
+//             'trace' => $e->getTraceAsString(),
+//             'response' => $body ?? null
+//         ]);
+//         throw $e;
+//     }
+// }
+
+
+private function processAPIResponse($response)
+{
+    try {
+        // Since $response is already the content array, we don't need to decode it
+        if (!is_array($response) || empty($response)) {
+            throw new \Exception('Invalid API response structure');
+        }
+
+        // Extract the text from the first message
+        if (!isset($response[0]['text'])) {
+            Log::error('Invalid API response structure', ['response' => $response]);
+            throw new \Exception('Invalid response structure from API');
+        }
+
+        $text = $response[0]['text'];
+        
+        // Find the JSON part in the text
+        if (preg_match('/\{.*\}/s', $text, $matches)) {
+            $jsonStr = $matches[0];
+            $extractedData = json_decode($jsonStr, true);
+            
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new \Exception('Failed to decode extracted data: ' . json_last_error_msg());
+            }
+
+            // Validate the structure
+            if (!isset($extractedData['event_info']) || !isset($extractedData['guides'])) {
+                Log::error('Invalid data structure', ['extracted' => $extractedData]);
+                throw new \Exception('Invalid data structure in API response');
+            }
+
+            return $extractedData;
+        }
+
+        throw new \Exception('No valid JSON found in API response');
+    } catch (\Exception $e) {
+        Log::error('API Response Processing Error', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+            'response' => $response
+        ]);
+        throw $e;
+    }
+}
+
+    public function checkSheet()
+    {
+        try {
+            $today = Carbon::today()->format('Y-m-d');
+            $tours = OperationsDayTours::where('tour_date', $today)
+                ->orderBy('pickup_time')
+                ->get();
+
+
+            $guides = TourGuide::orderBy('name','asc')->get(); 
+            $vehicles = Vehicles::all();    
+            
+            return view('operations.check-sheet', [
+                'tours' => $tours,
+                'date' => $today,
+                'guides' => $guides,
+                'vehicles' => $vehicles
+            ]);
+
+
+        } catch (\Exception $e) {
+            Log::error('Error loading check sheet', ['error' => $e->getMessage()]);
+            return back()->with('error', 'Error loading check sheet: ' . $e->getMessage());
+        }
+    }
+
+    public function exportDaySheet(Request $request)
+    {
+        try {
+            $date = $request->input('date', Carbon::today()->format('Y-m-d'));
+            
+            $tours = OperationsDayTours::where('tour_date', $date)
+                ->orderBy('pickup_time')
+                ->get();
+            
+            return view('operations.export-sheet', [
+                'tours' => $tours,
+                'date' => $date
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error exporting day sheet', ['error' => $e->getMessage()]);
+            return back()->with('error', 'Error exporting day sheet: ' . $e->getMessage());
+        }
+    }
+
+    public function dashboard()
+    {
+        try {
+            $today = Carbon::today()->format('Y-m-d');
+            
+            $stats = [
+                'total_tours' => OperationsDayTours::where('tour_date', $today)
+                    ->select('tour_name')
+                    ->distinct()
+                    ->count(),
+                'total_vehicles' => OperationsDayTours::where('tour_date', $today)
+                    ->where('vehicle', '!=', 'NA')
+                    ->select('vehicle')
+                    ->distinct()
+                    ->count(),
+                'total_guides' => OperationsDayTours::where('tour_date', $today)
+                    ->where('guide', '!=', 'NA')
+                    ->select('guide')
+                    ->distinct()
+                    ->count(),
+                'total_passengers' => OperationsDayTours::where('tour_date', $today)
+                    ->sum('pax')
+            ];
+
+            $upcomingTours = OperationsDayTours::where('tour_date', '>=', $today)
+                ->orderBy('tour_date')
+                ->orderBy('pickup_time')
+                ->take(10)
+                ->get();
+
+            return view('operations.dashboard', [
+                'stats' => $stats,
+                'upcomingTours' => $upcomingTours
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error loading dashboard', ['error' => $e->getMessage()]);
+            return back()->with('error', 'Error loading dashboard: ' . $e->getMessage());
+        }
+    }
+
+    // Vehicle Management Methods
     public function manageVehicles()
     {
-        $vehicles = Vehicles::all();
+        $vehicles = Vehicles::orderBy('name')->get();
         return view('operations.manage-vehicles', compact('vehicles'));
     }
 
     public function storeVehicle(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'required|string|in:Sedan,SUV,Van,Bus',
             'number' => 'required|string|max:255|unique:vehicles,number',
             'number_of_seats' => 'required|integer|min:1',
             'number_of_baby_seats' => 'required|integer|min:0',
-            'status' => 'required',
+            'status' => 'required|boolean'
         ]);
 
-        Vehicles::create($request->all());
-
-        return redirect()->back()->with('success', 'Vehicle added successfully');
-    }
-
-    public function editVehicle(Vehicles $vehicle)
-    {
-        return view('operations.edit-vehicle', compact('vehicle'));
+        try {
+            Vehicles::create($validated);
+            return redirect()->route('vehicles.index')->with('success', 'Vehicle added successfully');
+        } catch (\Exception $e) {
+            Log::error('Error storing vehicle', ['error' => $e->getMessage()]);
+            return back()->with('error', 'Error adding vehicle: ' . $e->getMessage())->withInput();
+        }
     }
 
     public function updateVehicle(Request $request, Vehicles $vehicle)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'required|string|in:Sedan,SUV,Van,Bus',
             'number' => 'required|string|max:255|unique:vehicles,number,' . $vehicle->id,
             'number_of_seats' => 'required|integer|min:1',
             'number_of_baby_seats' => 'required|integer|min:0',
-            'status' => 'required',
+            'status' => 'required|boolean'
         ]);
 
-        $vehicle->update($request->all());
-
-        return redirect()->route('vehicles.index')->with('success', 'Vehicle updated successfully');
+        try {
+            $vehicle->update($validated);
+            return redirect()->route('vehicles.index')->with('success', 'Vehicle updated successfully');
+        } catch (\Exception $e) {
+            Log::error('Error updating vehicle', ['error' => $e->getMessage()]);
+            return back()->with('error', 'Error updating vehicle: ' . $e->getMessage())->withInput();
+        }
     }
 
     public function destroyVehicle(Vehicles $vehicle)
     {
-        $vehicle->delete();
-        return redirect()->back()->with('success', 'Vehicle deleted successfully');
-    }
-
-    public function checkSheet()
-    {
-        // Get today's date in the format stored in the database
-        $today = Carbon::today()->format('d.m.Y');
-
-        // Get events with status 0 and today's date
-        $events = OperationsDayTours::where('tour_date', $today)
-            ->get();
-
-        return view('operations.check-sheet', compact('events'));
+        try {
+            $vehicle->delete();
+            return redirect()->route('vehicles.index')->with('success', 'Vehicle deleted successfully');
+        } catch (\Exception $e) {
+            Log::error('Error deleting vehicle', ['error' => $e->getMessage()]);
+            return back()->with('error', 'Error deleting vehicle: ' . $e->getMessage());
+        }
     }
 }
