@@ -149,28 +149,6 @@
                     </div>
                 </div>
             </div>
-                        <div id="weekRange" class="text-center">
-                            <strong>Week: {{ Carbon\Carbon::parse($selectedDate)->startOfWeek()->format('d M Y') }} -
-                                {{ Carbon\Carbon::parse($selectedDate)->endOfWeek()->format('d M Y') }}</strong>
-                        </div>
-                        <div class="d-flex align-items-center">
-                            <a href="{{ route('supervisor.populate-previous-week', ['week' => $selectedDate]) }}"
-                                class="btn border-success text-success copy-btn mr-2"
-                                id="copyPreviousWeekBtn">
-                                <i class="fas fa-copy"></i> Copy Last Week
-                            </a>
-                            <a href="{{ route('supervisor.clear-current-week', ['week' => $selectedDate]) }}"
-                                class="btn text-danger border-danger clear-btn mr-2"
-                                id="clearCurrentWeekBtn">
-                                <i class="fas fa-trash"></i> Clear This Week Data
-                            </a>
-                            <input type="date" name="week" id="week" class="form-control"
-                                style="width: 200px;"
-                                value="{{ $selectedDate }}">
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- Department Tabs -->
             <div class="row">
@@ -302,6 +280,13 @@
                                                                     @endif
                                                                     
                                                                     <div class="time-slots">
+                                                                        <!-- Debug: Show count of time slots -->
+                                                                        @if(count($hoursData) > 0)
+                                                                            <!-- Found {{ count($hoursData) }} time slots for {{ $staff->name }} on {{ $dateString }} -->
+                                                                        @else
+                                                                            <!-- No time slots found for {{ $staff->name }} on {{ $dateString }} -->
+                                                                        @endif
+                                                                        
                                                                         @forelse($hoursData as $index => $timeRange)
                                                                         <div class="time-slot mb-1">
                                                                             <div class="time-input-container">

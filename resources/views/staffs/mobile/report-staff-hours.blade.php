@@ -69,20 +69,16 @@
          data-staff-email="{{ $staff->email }}">
         
         <!-- Staff Header -->
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">{{ $staff->name }}</h5>
+        <div class="card-header d-flex justify-content-between align-items-center" style="background: #2c3749; color: #dee2e6;">
+            <h5 class="mb-0 staff-name" data-staff-name="{{ $staff->name }}">{{ $staff->name }}</h5>
             <div class="staff-navigation">
-                @if($staffIndex > 0)
-                    <button class="btn btn-light btn-sm me-1" onclick="showPreviousStaff()">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                @endif
-                <span class="badge bg-light text-dark">{{ $staffIndex + 1 }}/{{ $departmentStaff->count() }}</span>
-                @if($staffIndex < $departmentStaff->count() - 1)
-                    <button class="btn btn-light btn-sm ms-1" onclick="showNextStaff()">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
-                @endif
+                <button class="btn btn-light btn-sm me-1" id="prev-staff-btn" style="display: none;">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <span class="badge bg-light text-dark staff-counter">1/{{ $departmentStaff->count() }}</span>
+                <button class="btn btn-light btn-sm ms-1" id="next-staff-btn" @if($departmentStaff->count() <= 1) style="display: none;" @endif>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
             </div>
         </div>
         
@@ -98,7 +94,8 @@
                             $dayNumber = $date->format('d');
                         @endphp
                         <div class="col">
-                            <button class="btn btn-outline-primary btn-sm w-100 day-btn {{ $dayIndex === 0 ? 'active' : '' }} {{ $isHoliday ? 'holiday' : '' }}" 
+                            <button class="btn btn-sm w-100 day-btn {{ $dayIndex === 0 ? 'active' : '' }} {{ $isHoliday ? 'holiday' : '' }}" 
+                    style="border: 1px solid #23cbe0; color: #dee2e6; background: #323e53;" 
                                     data-date="{{ $dateString }}"
                                     data-day-index="{{ $dayIndex }}"
                                     type="button"
@@ -184,13 +181,13 @@
                             @endforelse
                             
                             <!-- Add Time Slot Button -->
-                            <button type="button" class="btn btn-outline-success btn-mobile w-100 mb-3" 
+                            <button type="button" class="btn btn-mobile w-100 mb-3" style="background: #28a745; color: white; border: none;" 
                                     onclick="addTimeSlot('{{ $staff->id }}', '{{ $dateString }}')">
                                 <i class="fas fa-plus-circle me-2"></i>Add Time Slot
                             </button>
                             
                             <!-- Save Day Button -->
-                            <button type="button" class="btn btn-primary btn-mobile w-100" 
+                            <button type="button" class="btn btn-mobile w-100" style="background: #23cbe0; color: white; border: none;" 
                                     onclick="saveDay('{{ $staff->id }}', '{{ $dateString }}')">
                                 <i class="fas fa-save me-2"></i>Save {{ $date->format('D') }}
                             </button>
@@ -395,12 +392,13 @@
     transform: scale(0.98);
 }
 
-/* Custom time picker styling */
+/* Custom time picker styling - Dark Theme */
 .time-picker-group {
-    background: #f8f9fa;
+    background: #2c3749;
     border-radius: 8px;
     padding: 12px;
     margin-bottom: 8px;
+    border: 1px solid #38455c;
 }
 
 /* Day content visibility */
@@ -423,17 +421,18 @@
     padding: 15px;
 }
 
-/* Ensure time entries are visible and properly spaced */
+/* Ensure time entries are visible and properly spaced - Dark Theme */
 .time-entry {
     display: block !important;
     margin-bottom: 15px;
     padding: 10px;
-    background: white;
+    background: #323e53;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    border: 1px solid #38455c;
     clear: both; /* Prevent floating issues */
-    overflow: hidden; /* Contain floated elements */
     position: relative; /* Establish positioning context */
+    color: #dee2e6;
 }
 
 /* Ensure time picker groups don't overlap */
@@ -458,7 +457,111 @@
     position: relative;
     z-index: 1;
 }
-</style>1
+
+/* Dark theme form inputs */
+.time-entry .form-control {
+    background: #38455c;
+    border: 1px solid #4a5568;
+    color: #dee2e6;
+}
+
+.time-entry .form-control:focus {
+    background: #38455c;
+    border-color: #23cbe0;
+    color: #dee2e6;
+    box-shadow: 0 0 0 0.2rem rgba(35, 203, 224, 0.25);
+}
+
+.time-entry .form-label {
+    color: #a8b5c8;
+}
+
+/* Dark theme for badges */
+.time-entry .badge {
+    background: #4a5568 !important;
+    color: #dee2e6;
+}
+
+.time-entry .badge.bg-secondary {
+    background: #4a5568 !important;
+    color: #dee2e6;
+}
+
+/* Special type display styling */
+.time-entry .special-type-display .badge {
+    background: #4a5568 !important;
+    color: #dee2e6;
+    border: 1px solid #38455c;
+}
+
+/* Buttons in time entries */
+.time-entry .btn-outline-danger {
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+.time-entry .btn-outline-danger:hover {
+    background: #dc3545;
+    color: #dee2e6;
+}
+
+.time-entry .btn-outline-primary {
+    border-color: #23cbe0;
+    color: #23cbe0;
+}
+
+.time-entry .btn-outline-primary:hover {
+    background: #23cbe0;
+    color: #2c3749;
+}
+
+/* Quick action buttons dark theme */
+.time-entry .btn-group .btn {
+    border-color: #4a5568;
+    color: #a8b5c8;
+    background: #38455c;
+}
+
+.time-entry .btn-group .btn:hover {
+    background: #4a5568;
+    border-color: #23cbe0;
+    color: #23cbe0;
+}
+
+.time-entry .btn-outline-secondary {
+    border-color: #4a5568;
+    color: #a8b5c8;
+    background: #38455c;
+}
+
+.time-entry .btn-outline-secondary:hover {
+    background: #4a5568;
+    border-color: #a8b5c8;
+    color: #dee2e6;
+}
+
+.time-entry .btn-outline-success {
+    border-color: #28a745;
+    color: #28a745;
+    background: #38455c;
+}
+
+.time-entry .btn-outline-success:hover {
+    background: #28a745;
+    color: #dee2e6;
+}
+
+.time-entry .btn-outline-info {
+    border-color: #17a2b8;
+    color: #17a2b8;
+    background: #38455c;
+}
+
+.time-entry .btn-outline-info:hover {
+    background: #17a2b8;
+    color: #dee2e6;
+}
+</style>
 @endpush
 
 @push('scripts')
@@ -468,13 +571,87 @@ console.log('Mobile JavaScript loading...');
 
 @php
     $firstDepartment = array_keys($staffByDepartment)[0] ?? '';
+    $currentUserDepartment = Auth::user()->staff ? Auth::user()->staff->department : '';
+    $departmentsWithPhoneReception = ['Operations', 'HR', 'Booking'];
+    $showPhoneReceptionButtons = false;
+    if ($currentUserDepartment) {
+        foreach ($departmentsWithPhoneReception as $allowedDept) {
+            // Check for exact match or if department contains the allowed department name
+            if ($currentUserDepartment === $allowedDept || 
+                str_contains(strtolower($currentUserDepartment), strtolower($allowedDept))) {
+                $showPhoneReceptionButtons = true;
+                break;
+            }
+        }
+    }
 @endphp
-let currentDepartment = {!! json_encode($firstDepartment) !!};
+
+let currentDepartment = @json($firstDepartment);
 let currentStaffIndex = 0;
 let currentDayIndex = 0;
 let hasUnsavedChanges = false;
 
+// Debug function to check navigation state
+window.debugNavigationState = function() {
+    console.log('🔍 Navigation State Debug:');
+    console.log('Current department:', currentDepartment);
+    console.log('Current staff index:', currentStaffIndex);
+    console.log('Current day index:', currentDayIndex);
+    
+    const activeContent = document.querySelector('.department-content.active');
+    if (activeContent) {
+        const staffCards = activeContent.querySelectorAll('.staff-card');
+        console.log('Staff cards in active department:', staffCards.length);
+        
+        staffCards.forEach((card, index) => {
+            const isActive = card.classList.contains('active');
+            const hasHiddenClass = card.classList.contains('d-none');
+            // Get the staff name from the data attribute AND the staff ID for better debugging
+            const staffNameAttr = card.querySelector('.staff-name')?.getAttribute('data-staff-name') || 'Unknown';
+            const staffNameText = card.querySelector('.staff-name')?.textContent || 'Unknown';
+            const staffId = card.getAttribute('data-staff-id') || 'No ID';
+            const visibility = hasHiddenClass ? 'hidden' : (isActive ? 'ACTIVE' : 'visible');
+            console.log(`  Staff ${index}: ${staffNameAttr} (ID: ${staffId}) [Text: ${staffNameText}] - ${visibility}`);
+        });
+    }
+};
+
+// Test navigation functions for debugging
+window.testNavigation = function() {
+    console.log('🧪 Testing navigation sequence...');
+    console.log('Starting from staff 0');
+    showStaffMember(0);
+    
+    setTimeout(() => {
+        console.log('Moving to staff 1');
+        showStaffMember(1);
+        
+        setTimeout(() => {
+            console.log('Moving to staff 2'); 
+            showStaffMember(2);
+            
+            setTimeout(() => {
+                console.log('Back to staff 1');
+                showStaffMember(1);
+                setTimeout(() => debugNavigationState(), 100);
+            }, 1000);
+        }, 1000);
+    }, 1000);
+};
+
+// Manual navigation helpers
+window.goToStaff = function(index) {
+    console.log(`🎯 Manual navigation to staff ${index}`);
+    showStaffMember(index);
+    setTimeout(() => debugNavigationState(), 100);
+};
+let userDepartment = @json($currentUserDepartment);
+let showPhoneReceptionButtons = @json($showPhoneReceptionButtons);
+
 console.log('Variables initialized:', {currentDepartment, currentStaffIndex, currentDayIndex});
+console.log('User department:', userDepartment);
+console.log('Show phone/reception buttons:', showPhoneReceptionButtons);
+console.log('Departments with phone/reception access: Operations, HR, Booking (and variations like Package Booking)');
 
 // Debug data availability
 console.log('🔍 Debug data:');
@@ -693,6 +870,8 @@ function switchDepartment(department) {
 }
 
 function performDepartmentSwitch(department) {
+    console.log(`🔄 Switching to department: ${department}`);
+    
     // Update tabs
     document.querySelectorAll('.mobile-tab').forEach(tab => {
         tab.classList.remove('active');
@@ -709,11 +888,18 @@ function performDepartmentSwitch(department) {
     targetContent.classList.remove('d-none');
     targetContent.classList.add('active');
     
+    // CRITICAL: Reset navigation state for new department
     currentDepartment = department;
     currentStaffIndex = 0;
+    currentDayIndex = 0;
     
-    // Show first staff member
-    showStaffMember(0);
+    console.log(`🔧 Reset navigation state: dept=${currentDepartment}, staffIndex=${currentStaffIndex}, dayIndex=${currentDayIndex}`);
+    
+    // Show first staff member in the new department
+    setTimeout(() => {
+        showStaffMember(0);
+        console.log(`📋 Department switch complete: ${department}`);
+    }, 50);
     
     // Reset unsaved changes flag for new department
     hasUnsavedChanges = false;
@@ -721,37 +907,170 @@ function performDepartmentSwitch(department) {
 
 // Show specific staff member
 function showStaffMember(index) {
-    const activeContent = document.querySelector('.department-content.active');
-    const staffCards = activeContent.querySelectorAll('.staff-card');
+    console.log(`🟢 showStaffMember called with index: ${index}`);
     
+    const activeContent = document.querySelector('.department-content.active');
+    if (!activeContent) {
+        console.error('❌ No active department content found');
+        return;
+    }
+    
+    const staffCards = activeContent.querySelectorAll('.staff-card');
+    console.log(`📋 Found ${staffCards.length} staff cards in active department`);
+    
+    if (index >= staffCards.length || index < 0) {
+        console.warn(`❌ Staff index ${index} out of range (0-${staffCards.length-1})`);
+        return;
+    }
+    
+    // CRITICAL: Store the target staff info BEFORE we modify anything
+    const targetCard = staffCards[index];
+    const targetStaffName = targetCard.querySelector('.staff-name')?.getAttribute('data-staff-name') || 'Unknown Staff';
+    console.log(`🎯 Target staff: ${targetStaffName} (index ${index})`);
+    
+    // Hide all staff cards and show the selected one
     staffCards.forEach((card, i) => {
         if (i === index) {
             card.classList.remove('d-none');
             card.classList.add('active');
+            console.log(`✅ Showing staff card ${i} (${card.querySelector('.staff-name')?.getAttribute('data-staff-name')})`);
         } else {
             card.classList.add('d-none');
             card.classList.remove('active');
+            console.log(`👻 Hiding staff card ${i} (${card.querySelector('.staff-name')?.getAttribute('data-staff-name')})`);
         }
     });
     
+    // DON'T modify staff headers - each staff card keeps its own original name
+    // The visible staff card already has the correct name from the server-side rendering
+    
+    // Update staff counter - but only for the ACTIVE staff card to avoid duplicates
+    const totalStaff = staffCards.length;
+    const currentPosition = index + 1;
+    const activeStaffCounters = targetCard.querySelectorAll('.staff-counter');
+    activeStaffCounters.forEach((counter, counterIndex) => {
+        console.log(`🔢 Updating counter ${counterIndex} to: ${currentPosition}/${totalStaff}`);
+        counter.textContent = `${currentPosition}/${totalStaff}`;
+    });
+    
+    // Update navigation button visibility - only for the ACTIVE staff card
+    const prevButtons = targetCard.querySelectorAll('#prev-staff-btn');
+    const nextButtons = targetCard.querySelectorAll('#next-staff-btn');
+    
+    console.log(`🔍 Found ${prevButtons.length} prev buttons and ${nextButtons.length} next buttons in active card`);
+    
+    prevButtons.forEach((btn, btnIndex) => {
+        if (index > 0) {
+            btn.style.display = 'inline-block';
+            btn.classList.remove('d-none');
+            console.log(`👈 Enabling prev button ${btnIndex}`);
+        } else {
+            btn.style.display = 'none';
+            btn.classList.add('d-none');
+            console.log(`👈 Disabling prev button ${btnIndex}`);
+        }
+    });
+    
+    nextButtons.forEach((btn, btnIndex) => {
+        if (index < totalStaff - 1) {
+            btn.style.display = 'inline-block';
+            btn.classList.remove('d-none');
+            console.log(`👉 Enabling next button ${btnIndex}`);
+        } else {
+            btn.style.display = 'none';
+            btn.classList.add('d-none');
+            console.log(`👉 Disabling next button ${btnIndex}`);
+        }
+    });
+    
+    console.log(`📋 Staff navigation updated: ${targetStaffName} (${currentPosition}/${totalStaff})`);
+    console.log(`🔍 Navigation state: prev=${index > 0 ? 'visible' : 'hidden'}, next=${index < totalStaff - 1 ? 'visible' : 'hidden'}`);
+    
+    // Ensure first day is visible for the newly active staff
+    const firstDayButton = targetCard.querySelector('.day-btn[data-day-index="0"], .day-btn:first-of-type');
+    if (firstDayButton) {
+        // Reset all day buttons in the target card
+        const allDayButtons = targetCard.querySelectorAll('.day-btn');
+        allDayButtons.forEach(btn => btn.classList.remove('active'));
+        
+        // Activate first day button
+        firstDayButton.classList.add('active');
+        
+        // Show first day content in the target card
+        const allDayContents = targetCard.querySelectorAll('.day-content');
+        allDayContents.forEach((content, i) => {
+            if (i === 0) {
+                content.classList.remove('d-none');
+                content.classList.add('active');
+            } else {
+                content.classList.add('d-none');
+                content.classList.remove('active');
+            }
+        });
+        
+        console.log(`📅 Reset to first day for ${targetStaffName}`);
+    }
+    
+    // CRITICAL: Update the global index AFTER everything is complete
     currentStaffIndex = index;
+    currentDayIndex = 0; // Reset to first day when switching staff
+    console.log(`✅ Staff member ${index} (${targetStaffName}) is now active. Global currentStaffIndex = ${currentStaffIndex}`);
 }
 
 // Navigation functions
 function showNextStaff() {
+    console.log('🟢 showNextStaff called, current index:', currentStaffIndex);
+    
     const activeContent = document.querySelector('.department-content.active');
+    if (!activeContent) {
+        console.error('❌ No active department content found');
+        MobileApp.showError('No active department found');
+        return;
+    }
+    
     const staffCards = activeContent.querySelectorAll('.staff-card');
+    console.log(`📋 Found ${staffCards.length} staff cards, current index: ${currentStaffIndex}`);
+    
+    // Debug current state before navigation
+    debugNavigationState();
     
     if (currentStaffIndex < staffCards.length - 1) {
-        showStaffMember(currentStaffIndex + 1);
+        const nextIndex = currentStaffIndex + 1;
+        console.log(`➡️ Moving to next staff (index ${nextIndex})`);
+        showStaffMember(nextIndex);
         MobileApp.vibrate([50]);
+        
+        // Verify navigation worked
+        setTimeout(() => {
+            console.log('📊 Post-navigation state:');
+            debugNavigationState();
+        }, 100);
+    } else {
+        console.log('❌ Already at last staff member');
+        MobileApp.showError('Already at the last staff member');
     }
 }
 
 function showPreviousStaff() {
+    console.log('🟢 showPreviousStaff called, current index:', currentStaffIndex);
+    
+    // Debug current state before navigation
+    debugNavigationState();
+    
     if (currentStaffIndex > 0) {
-        showStaffMember(currentStaffIndex - 1);
+        const prevIndex = currentStaffIndex - 1;
+        console.log(`⬅️ Moving to previous staff (index ${prevIndex})`);
+        showStaffMember(prevIndex);
         MobileApp.vibrate([50]);
+        
+        // Verify navigation worked
+        setTimeout(() => {
+            console.log('📊 Post-navigation state:');
+            debugNavigationState();
+        }, 100);
+    } else {
+        console.log('❌ Already at first staff member');
+        MobileApp.showError('Already at the first staff member');
     }
 }
 
@@ -806,19 +1125,19 @@ function addTimeSlot(staffId, dateString) {
             <div class="row align-items-center">
                 <div class="col">
                     <!-- Start Time -->
-                    <label class="form-label small text-muted">Start Time</label>
+                    <label class="form-label small text-muted" style="color: #a8b5c8;">Start Time</label>
                     <input type="time" class="form-control form-control-mobile time-start" value="" onchange="updateTimeRange(this)">
                 </div>
                 <div class="col-auto px-2 mt-4">
-                    <i class="fas fa-arrow-right text-muted"></i>
+                    <i class="fas fa-arrow-right text-muted" style="color: #a8b5c8;"></i>
                 </div>
                 <div class="col">
                     <!-- End Time -->
-                    <label class="form-label small text-muted">End Time</label>
+                    <label class="form-label small text-muted" style="color: #a8b5c8;">End Time</label>
                     <input type="time" class="form-control form-control-mobile time-end" value="" onchange="updateTimeRange(this)">
                 </div>
                 <div class="col-auto">
-                    <label class="form-label small text-muted">&nbsp;</label>
+                    <label class="form-label small text-muted" style="color: #a8b5c8;">&nbsp;</label>
                     <div>
                         <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeTimeEntry(this)">
                             <i class="fas fa-trash"></i>
@@ -833,8 +1152,8 @@ function addTimeSlot(staffId, dateString) {
                     <button type="button" class="btn btn-outline-secondary btn-sm" onclick="applyQuickFill(this, 'V')" title="Vacation">V</button>
                     <button type="button" class="btn btn-outline-secondary btn-sm" onclick="applyQuickFill(this, 'X')" title="Day Off">X</button>
                     <button type="button" class="btn btn-outline-secondary btn-sm" onclick="applyQuickFill(this, 'H')" title="Holiday">H</button>
-                    <button type="button" class="btn btn-outline-success btn-sm" onclick="applyQuickFill(this, 'on_call')" title="On Call">📞</button>
-                    <button type="button" class="btn btn-outline-info btn-sm" onclick="applyQuickFill(this, 'reception')" title="Reception">💻</button>
+                    ${showPhoneReceptionButtons ? '<button type="button" class="btn btn-outline-success btn-sm" onclick="applyQuickFill(this, \'on_call\')" title="On Call">📞</button>' : ''}
+                    ${showPhoneReceptionButtons ? '<button type="button" class="btn btn-outline-info btn-sm" onclick="applyQuickFill(this, \'reception\')" title="Reception">💻</button>' : ''}
                     <button type="button" class="btn btn-outline-primary btn-sm" onclick="applyQuickFill(this, 'regular')" title="Regular Hours">⏰</button>
                 </div>
             </div>
@@ -923,10 +1242,27 @@ function addTimeSlot(staffId, dateString) {
         return;
     }
     
-    const addButton = dayForm.querySelector('.btn-outline-success');
+    // Look for the add button by multiple selectors since styling may have changed
+    let addButton = dayForm.querySelector('.btn-outline-success');
     if (!addButton) {
-        console.error('❌ Add button not found');
-        MobileApp.showError('Add button not found');
+        // Try alternative selectors
+        addButton = dayForm.querySelector('button[onclick*="addTimeSlot"]');
+    }
+    if (!addButton) {
+        // Try by text content
+        const buttons = dayForm.querySelectorAll('button');
+        for (let btn of buttons) {
+            if (btn.textContent.includes('Add Time Slot')) {
+                addButton = btn;
+                break;
+            }
+        }
+    }
+    
+    if (!addButton) {
+        console.error('❌ Add button not found after all attempts');
+        console.log('Available buttons in day form:', Array.from(dayForm.querySelectorAll('button')).map(b => b.textContent.trim()));
+        MobileApp.showError('Add Time Slot button not found');
         return;
     }
     
@@ -1069,7 +1405,29 @@ window.addEventListener('beforeunload', function(e) {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing day button handlers');
+    console.log('DOM loaded, initializing mobile staff navigation...');
+    
+    // Ensure proper initial state
+    currentStaffIndex = 0;
+    currentDayIndex = 0;
+    
+    console.log('🔧 Initial state set:', {
+        currentDepartment,
+        currentStaffIndex,
+        currentDayIndex
+    });
+    
+    // Initialize staff navigation - ensure first staff is shown
+    setTimeout(() => {
+        console.log('🚀 Initializing first staff member...');
+        showStaffMember(0);
+        
+        // Verify initialization
+        setTimeout(() => {
+            console.log('✅ Initialization verification:');
+            debugNavigationState();
+        }, 200);
+    }, 100);
     
     // Direct event listeners for day buttons
     const dayButtons = document.querySelectorAll('.day-btn');
@@ -1088,6 +1446,36 @@ document.addEventListener('DOMContentLoaded', function() {
             selectDay(dateString, dayIndex);
         });
     });
+    
+    // Initialize staff navigation buttons
+    const nextStaffButtons = document.querySelectorAll('#next-staff-btn');
+    const prevStaffButtons = document.querySelectorAll('#prev-staff-btn');
+    
+    console.log(`🔘 Found ${nextStaffButtons.length} next buttons and ${prevStaffButtons.length} prev buttons to initialize`);
+    
+    nextStaffButtons.forEach((btn, index) => {
+        console.log(`🔘 Adding event listener to next button ${index}`);
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log(`🟢 Next staff button ${index} clicked - currentStaffIndex before: ${currentStaffIndex}`);
+            debugNavigationState();
+            showNextStaff();
+        });
+    });
+    
+    prevStaffButtons.forEach((btn, index) => {
+        console.log(`🔘 Adding event listener to prev button ${index}`);
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log(`🟢 Previous staff button ${index} clicked - currentStaffIndex before: ${currentStaffIndex}`);
+            debugNavigationState();
+            showPreviousStaff();
+        });
+    });
+    
+    console.log(`Initialized ${nextStaffButtons.length} next buttons and ${prevStaffButtons.length} prev buttons`);
     
     // Auto-dismiss alerts
     setTimeout(() => {

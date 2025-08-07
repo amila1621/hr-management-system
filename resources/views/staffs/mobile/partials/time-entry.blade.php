@@ -60,7 +60,7 @@
     
     @if($isSpecialType)
         <!-- Special Type Display (V, X, H, SL) -->
-        <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex justify-content-between align-items-center mb-2">
             <div class="special-type-display">
                 <span class="badge bg-secondary fs-6 p-2">
                     @switch($hiddenValue)
@@ -73,10 +73,17 @@
                 </span>
             </div>
             @if(!$isOwnRoster)
-                <button type="button" class="btn btn-outline-danger btn-sm" 
-                        onclick="removeTimeEntry(this)">
-                    <i class="fas fa-trash"></i>
-                </button>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-primary btn-sm" 
+                            onclick="convertToRegularHours(this)"
+                            title="Convert to regular time entry">
+                        <i class="fas fa-clock"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-sm" 
+                            onclick="removeTimeEntry(this)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
             @endif
         </div>
     @else
@@ -84,7 +91,7 @@
         <div class="row align-items-center">
             <div class="col">
                 <!-- Start Time -->
-                <label class="form-label small text-muted">Start Time</label>
+                <label class="form-label small text-muted" style="color: #a8b5c8;">Start Time</label>
                 <input type="time" 
                        class="form-control form-control-mobile time-start"
                        value="{{ $displayStartTime }}"
@@ -92,11 +99,11 @@
                        onchange="updateTimeRange(this)">
             </div>
             <div class="col-auto px-2 mt-4">
-                <i class="fas fa-arrow-right text-muted"></i>
+                <i class="fas fa-arrow-right text-muted" style="color: #a8b5c8;"></i>
             </div>
             <div class="col">
                 <!-- End Time -->
-                <label class="form-label small text-muted">End Time</label>
+                <label class="form-label small text-muted" style="color: #a8b5c8;">End Time</label>
                 <input type="time" 
                        class="form-control form-control-mobile time-end"
                        value="{{ $displayEndTime }}"
@@ -105,7 +112,7 @@
             </div>
             @if(!$isOwnRoster)
                 <div class="col-auto">
-                    <label class="form-label small text-muted">&nbsp;</label>
+                    <label class="form-label small" style="color: #a8b5c8;">&nbsp;</label>
                     <div>
                         <button type="button" class="btn btn-outline-danger btn-sm" 
                                 onclick="removeTimeEntry(this)">
@@ -135,6 +142,29 @@
     
     @if(!$isOwnRoster && !$isSpecialType)
         <!-- Quick Action Buttons -->
+        @php
+            // Check current user's department for department-specific buttons
+            $currentUserDepartment = '';
+            if (Auth::user()->staff) {
+                $currentUserDepartment = Auth::user()->staff->department;
+            }
+            
+            // Departments that should have On Call and Reception buttons
+            $departmentsWithPhoneReception = ['Operations', 'HR', 'Booking'];
+            $showPhoneReceptionButtons = false;
+            
+            if ($currentUserDepartment) {
+                foreach ($departmentsWithPhoneReception as $allowedDept) {
+                    // Check for exact match or if department contains the allowed department name
+                    if ($currentUserDepartment === $allowedDept || 
+                        str_contains(strtolower($currentUserDepartment), strtolower($allowedDept))) {
+                        $showPhoneReceptionButtons = true;
+                        break;
+                    }
+                }
+            }
+        @endphp
+        
         <div class="mt-3">
             <div class="btn-group w-100" role="group">
                 <button type="button" class="btn btn-outline-secondary btn-sm" 
@@ -143,10 +173,14 @@
                         onclick="applyQuickFill(this, 'X')" title="Day Off">X</button>
                 <button type="button" class="btn btn-outline-secondary btn-sm" 
                         onclick="applyQuickFill(this, 'H')" title="Holiday">H</button>
-                <button type="button" class="btn btn-outline-success btn-sm" 
-                        onclick="applyQuickFill(this, 'on_call')" title="On Call">📞</button>
-                <button type="button" class="btn btn-outline-info btn-sm" 
-                        onclick="applyQuickFill(this, 'reception')" title="Reception">💻</button>
+                
+                @if($showPhoneReceptionButtons)
+                    <button type="button" class="btn btn-outline-success btn-sm" 
+                            onclick="applyQuickFill(this, 'on_call')" title="On Call">📞</button>
+                    <button type="button" class="btn btn-outline-info btn-sm" 
+                            onclick="applyQuickFill(this, 'reception')" title="Reception">💻</button>
+                @endif
+                
                 <button type="button" class="btn btn-outline-primary btn-sm" 
                         onclick="applyQuickFill(this, 'regular')" title="Regular Hours">⏰</button>
             </div>
@@ -156,7 +190,7 @@
     @if($isOwnRoster)
         <!-- Restricted Access Message -->
         <div class="mt-2 text-center">
-            <small class="text-muted">
+            <small class="text-muted" style="color: #a8b5c8;">
                 <i class="fas fa-lock me-1"></i>Cannot edit own roster
             </small>
         </div>
@@ -287,6 +321,92 @@ function getTypeLabel(value) {
         case 'regular': return 'Regular Hours';
         default: return value;
     }
+}
+
+// Convert special type entry to regular hours
+function convertToRegularHours(button) {
+    console.log('🔄 convertToRegularHours called');
+    
+    const container = button.closest('.time-picker-group');
+    if (!container) {
+        console.error('❌ Time picker group container not found');
+        MobileApp.showError('Container not found');
+        return;
+    }
+    
+    MobileApp.confirm('Convert this entry to regular working hours?', () => {
+        const hiddenInput = container.querySelector('.time-range-input');
+        const specialDisplay = container.querySelector('.special-type-display').parentElement;
+        
+        // Clear the hidden input value to make it a regular entry
+        if (hiddenInput) hiddenInput.value = '';
+        
+        // Replace the special type display with regular time inputs
+        const regularHoursHTML = `
+            <div class="row align-items-center">
+                <div class="col">
+                    <!-- Start Time -->
+                    <label class="form-label small" style="color: #a8b5c8;">Start Time</label>
+                    <input type="time" 
+                           class="form-control form-control-mobile time-start"
+                           value="09:00"
+                           onchange="updateTimeRange(this)"
+                           style="background: #38455c; color: #dee2e6; border-color: #4a5568;">
+                </div>
+                <div class="col-auto px-2 mt-4">
+                    <i class="fas fa-arrow-right" style="color: #a8b5c8;"></i>
+                </div>
+                <div class="col">
+                    <!-- End Time -->
+                    <label class="form-label small" style="color: #a8b5c8;">End Time</label>
+                    <input type="time" 
+                           class="form-control form-control-mobile time-end"
+                           value="17:00"
+                           onchange="updateTimeRange(this)"
+                           style="background: #38455c; color: #dee2e6; border-color: #4a5568;">
+                </div>
+                <div class="col-auto">
+                    <label class="form-label small" style="color: #a8b5c8;">&nbsp;</label>
+                    <div>
+                        <button type="button" class="btn btn-outline-danger btn-sm" 
+                                onclick="removeTimeEntry(this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Action Buttons -->
+            <div class="mt-3">
+                <div class="btn-group w-100" role="group">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" 
+                            onclick="applyQuickFill(this, 'V')" title="Vacation">V</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" 
+                            onclick="applyQuickFill(this, 'X')" title="Day Off">X</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" 
+                            onclick="applyQuickFill(this, 'H')" title="Holiday">H</button>
+                    ${ (typeof showPhoneReceptionButtons !== 'undefined' && showPhoneReceptionButtons) ? 
+                        '<button type="button" class="btn btn-outline-success btn-sm" onclick="applyQuickFill(this, \'on_call\')" title="On Call">📞</button>' : '' }
+                    ${ (typeof showPhoneReceptionButtons !== 'undefined' && showPhoneReceptionButtons) ? 
+                        '<button type="button" class="btn btn-outline-info btn-sm" onclick="applyQuickFill(this, \'reception\')" title="Reception">💻</button>' : '' }
+                    <button type="button" class="btn btn-outline-primary btn-sm" 
+                            onclick="applyQuickFill(this, 'regular')" title="Regular Hours">⏰</button>
+                </div>
+            </div>
+        `;
+        
+        // Replace the special display
+        specialDisplay.outerHTML = regularHoursHTML;
+        
+        // Set default values and update hidden input
+        if (hiddenInput) hiddenInput.value = '09:00-17:00';
+        
+        hasUnsavedChanges = true;
+        MobileApp.vibrate([50]);
+        MobileApp.showSuccess('Converted to regular hours');
+        
+        console.log('✅ Converted special type to regular hours');
+    });
 }
 
 // Remove time entry

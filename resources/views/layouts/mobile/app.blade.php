@@ -11,7 +11,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
     <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#007bff">
+    <meta name="theme-color" content="#23cbe0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="HR System">
@@ -31,8 +31,8 @@
         }
         
         .mobile-header {
-            background: linear-gradient(135deg, #007bff, #0056b3);
-            color: white;
+            background: linear-gradient(135deg, #2c3749, #323e53);
+            color: #dee2e6;
             padding: 1rem;
             position: sticky;
             top: 0;
@@ -52,8 +52,8 @@
         }
         
         .mobile-footer {
-            background: #fff;
-            border-top: 1px solid #e9ecef;
+            background: #2c3749;
+            border-top: 1px solid #38455c;
             padding: 1rem;
             position: sticky;
             bottom: 0;
@@ -71,11 +71,13 @@
         
         /* Card styling */
         .mobile-card {
-            background: white;
+            background: #323e53;
             border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            border: 1px solid #38455c;
             margin-bottom: 1rem;
             overflow: hidden;
+            color: #dee2e6;
         }
         
         /* Form inputs */
@@ -83,13 +85,15 @@
             min-height: 44px;
             font-size: 16px;
             border-radius: 8px;
-            border: 2px solid #e9ecef;
+            border: 2px solid #4a5568;
+            background: #38455c;
+            color: #dee2e6;
             padding: 12px 16px;
         }
         
         .form-control-mobile:focus {
-            border-color: #007bff;
-            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+            border-color: #23cbe0;
+            box-shadow: 0 0 0 0.2rem rgba(35, 203, 224, 0.25);
         }
         
         /* Navigation tabs */
@@ -103,19 +107,20 @@
         .mobile-tab {
             min-width: 120px;
             padding: 12px 16px;
-            background: white;
-            border: none;
+            background: #38455c;
+            border: 1px solid #4a5568;
             border-radius: 20px;
             margin-right: 8px;
             white-space: nowrap;
             font-weight: 500;
-            color: #6c757d;
+            color: #a8b5c8;
             transition: all 0.2s ease;
         }
         
         .mobile-tab.active {
-            background: #007bff;
-            color: white;
+            background: #23cbe0;
+            color: #2c3749;
+            border-color: #23cbe0;
         }
         
         /* Loading states */
@@ -130,7 +135,7 @@
             width: 24px;
             height: 24px;
             border: 2px solid #f3f3f3;
-            border-top: 2px solid #007bff;
+            border-top: 2px solid #23cbe0;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -154,7 +159,7 @@
             top: 50%;
             transform: translateY(-50%);
             font-size: 1.5rem;
-            color: #007bff;
+            color: #23cbe0;
             opacity: 0.7;
         }
         
@@ -170,6 +175,147 @@
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
+        
+        /* Mobile Menu Styles */
+        .mobile-menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1998;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .mobile-menu-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .mobile-menu-sidebar {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 280px;
+            height: 100%;
+            background: linear-gradient(180deg, #2c3749 0%, #323e53 100%);
+            z-index: 1999;
+            transition: left 0.3s ease;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .mobile-menu-sidebar.active {
+            left: 0;
+        }
+        
+        .mobile-menu-header {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #dee2e6;
+        }
+        
+        .mobile-menu-content {
+            padding: 0;
+            height: calc(100% - 80px);
+            overflow-y: auto;
+        }
+        
+        .mobile-menu-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .mobile-menu-section {
+            padding: 1rem 1rem 0.5rem;
+        }
+        
+        .mobile-menu-section .section-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #a8b5c8;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+        
+        .mobile-menu-link {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            color: #dee2e6;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border: none;
+            background: none;
+            width: 100%;
+            font-size: 0.9rem;
+        }
+        
+        .mobile-menu-link:hover,
+        .mobile-menu-link:focus {
+            background: rgba(35, 203, 224, 0.1);
+            color: #23cbe0;
+            text-decoration: none;
+        }
+        
+        .mobile-menu-link.active {
+            background: rgba(35, 203, 224, 0.15);
+            color: #23cbe0;
+            border-left: 3px solid #23cbe0;
+        }
+        
+        .mobile-menu-item-collapsible .mobile-menu-link {
+            position: relative;
+        }
+        
+        .submenu-arrow {
+            transition: transform 0.2s ease;
+            font-size: 0.75rem;
+        }
+        
+        .mobile-menu-item-collapsible.expanded .submenu-arrow {
+            transform: rotate(90deg);
+        }
+        
+        .mobile-submenu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        .mobile-menu-item-collapsible.expanded .mobile-submenu {
+            max-height: 300px;
+        }
+        
+        .mobile-submenu-link {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem 0.5rem 2rem;
+            color: #a8b5c8;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+        }
+        
+        .mobile-submenu-link:hover,
+        .mobile-submenu-link:focus {
+            background: rgba(35, 203, 224, 0.1);
+            color: #23cbe0;
+            text-decoration: none;
+        }
+        
+        /* Prevent body scroll when menu is open */
+        body.mobile-menu-open {
+            overflow: hidden;
+        }
     </style>
     
     @stack('styles')
@@ -178,13 +324,135 @@
     <!-- Mobile Header -->
     <div class="mobile-header">
         <div class="d-flex justify-content-between align-items-center">
-            <h1>@yield('header-title', 'HR System')</h1>
-            <div>
+            <div class="d-flex align-items-center">
+                <button class="btn btn-link text-white p-0 me-3" onclick="toggleMobileMenu()" id="mobile-menu-toggle">
+                    <i class="fas fa-bars fs-5"></i>
+                </button>
+                <h1 class="mb-0">@yield('header-title', 'HR System')</h1>
+            </div>
+            <div class="d-flex align-items-center">
                 @yield('header-actions')
+                <!-- User Info -->
+                <div class="dropdown ms-2">
+                    <button class="btn btn-link text-white p-1 dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle fs-5"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><span class="dropdown-item-text small">{{ Auth::user()->name }}</span></li>
+                        <li><span class="dropdown-item-text small text-muted">{{ ucfirst(Auth::user()->role) }}</span></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                        </a></li>
+                    </ul>
+                </div>
             </div>
         </div>
         @yield('header-content')
     </div>
+    
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu-overlay" id="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
+    
+    <!-- Mobile Menu Sidebar -->
+    <div class="mobile-menu-sidebar" id="mobile-menu-sidebar">
+        <div class="mobile-menu-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Menu</h5>
+                <button class="btn btn-link text-white p-0" onclick="closeMobileMenu()">
+                    <i class="fas fa-times fs-4"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="mobile-menu-content">
+            <ul class="mobile-menu-list">
+                <li class="mobile-menu-section">
+                    <span class="section-title">
+                        <i class="fas fa-home me-2"></i>MAIN
+                    </span>
+                </li>
+                <li>
+                    <a href="{{ route('dashboard') }}" class="mobile-menu-link">
+                        <i class="fas fa-tachometer-alt me-3"></i>Dashboard
+                    </a>
+                </li>
+                
+                @if(Auth::user()->role == 'staff')
+                    <li class="mobile-menu-section">
+                        <span class="section-title">
+                            <i class="fas fa-user me-2"></i>PERSONAL
+                        </span>
+                    </li>
+                    
+                    @if (auth()->user()->staff && auth()->user()->staff->allow_report_hours)
+                        <li>
+                            <a href="{{ route('staff.report-hours') }}" class="mobile-menu-link {{ request()->routeIs('staff.report-hours') ? 'active' : '' }}">
+                                <i class="fas fa-clock me-3"></i>Report Work Hours
+                            </a>
+                        </li>
+                    @endif
+                    
+                    <li>
+                        <a href="{{ route('staff.schedule') }}" class="mobile-menu-link">
+                            <i class="fas fa-calendar-alt me-3"></i>Monthly Roster
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a href="{{ route('staff.hours-report') }}" class="mobile-menu-link">
+                            <i class="fas fa-hourglass me-3"></i>Hours Report
+                        </a>
+                    </li>
+                    
+                    <li class="mobile-menu-item-collapsible">
+                        <button class="mobile-menu-link w-100 text-start" onclick="toggleSubmenu(this)">
+                            <i class="fas fa-receipt me-3"></i>Sick Leave
+                            <i class="fas fa-chevron-right submenu-arrow ms-auto"></i>
+                        </button>
+                        <ul class="mobile-submenu">
+                            <li>
+                                <a href="{{ route('sick-leave.request-sick-leaves') }}" class="mobile-submenu-link">
+                                    <i class="fas fa-plus me-3"></i>Request Sick Leaves
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('sick-leave.manage-sick-leaves') }}" class="mobile-submenu-link">
+                                    <i class="fas fa-list me-3"></i>Sick Leave Records
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    
+                    <li class="mobile-menu-item-collapsible">
+                        <button class="mobile-menu-link w-100 text-start" onclick="toggleSubmenu(this)">
+                            <i class="fas fa-receipt me-3"></i>Receipts
+                            <i class="fas fa-chevron-right submenu-arrow ms-auto"></i>
+                        </button>
+                        <ul class="mobile-submenu">
+                            <li>
+                                <a href="{{ route('receipts.create') }}" class="mobile-submenu-link">
+                                    <i class="fas fa-plus me-3"></i>Submit Receipts
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('receipts.manage') }}" class="mobile-submenu-link">
+                                    <i class="fas fa-list me-3"></i>Receipt Records
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                @endif
+                
+                <!-- Add more role-based menu items as needed -->
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Hidden logout form -->
+    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+        @csrf
+    </form>
     
     <!-- Success/Error Messages -->
     @if (session()->has('success'))
@@ -273,7 +541,7 @@
                     text: message,
                     icon: 'question',
                     showCancelButton: true,
-                    confirmButtonColor: '#007bff',
+                    confirmButtonColor: '#23cbe0',
                     cancelButtonColor: '#6c757d',
                     confirmButtonText: 'Yes',
                     cancelButtonText: 'Cancel'
@@ -291,6 +559,67 @@
                 }
             }
         };
+        
+        // Mobile Menu Functions
+        window.toggleMobileMenu = function() {
+            const overlay = document.getElementById('mobile-menu-overlay');
+            const sidebar = document.getElementById('mobile-menu-sidebar');
+            const body = document.body;
+            
+            overlay.classList.add('active');
+            sidebar.classList.add('active');
+            body.classList.add('mobile-menu-open');
+        };
+        
+        window.closeMobileMenu = function() {
+            const overlay = document.getElementById('mobile-menu-overlay');
+            const sidebar = document.getElementById('mobile-menu-sidebar');
+            const body = document.body;
+            
+            overlay.classList.remove('active');
+            sidebar.classList.remove('active');
+            body.classList.remove('mobile-menu-open');
+        };
+        
+        window.toggleSubmenu = function(button) {
+            const listItem = button.closest('.mobile-menu-item-collapsible');
+            const isExpanded = listItem.classList.contains('expanded');
+            
+            if (isExpanded) {
+                listItem.classList.remove('expanded');
+            } else {
+                // Close other open submenus
+                document.querySelectorAll('.mobile-menu-item-collapsible.expanded').forEach(item => {
+                    item.classList.remove('expanded');
+                });
+                listItem.classList.add('expanded');
+            }
+            
+            // Add haptic feedback
+            if (navigator.vibrate) {
+                navigator.vibrate(30);
+            }
+        };
+        
+        // Close menu when clicking links (not submenu toggles)
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuLinks = document.querySelectorAll('.mobile-menu-link:not([onclick*="toggleSubmenu"]), .mobile-submenu-link');
+            menuLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    // Only close menu if it's not a submenu toggle
+                    if (!this.hasAttribute('onclick') || !this.getAttribute('onclick').includes('toggleSubmenu')) {
+                        closeMobileMenu();
+                    }
+                });
+            });
+        });
+        
+        // Close menu on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeMobileMenu();
+            }
+        });
         
         // Auto-hide alerts after 5 seconds
         document.addEventListener('DOMContentLoaded', function() {
