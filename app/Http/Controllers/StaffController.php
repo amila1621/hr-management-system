@@ -1778,7 +1778,7 @@ class StaffController extends Controller
             $staffHours[$staff->id] = $hours->map(function ($item) {
                 return [
                     'hours_data' => $item->hours_data,
-                    'is_approved' => $item->is_approved // Add this line
+                    'is_approved' => $item->is_approved
                 ];
             })->toArray();
         }
@@ -1858,7 +1858,13 @@ class StaffController extends Controller
         // Add this line to create a flattened collection for the dropdown:
         $allStaffFlattened = collect($staffByDepartment)->flatten();
 
-        return view('staffs.report-staff-hours', compact(
+        // Check if mobile device or force mobile view
+        $isMobile = session('is_mobile', false) || $request->has('mobile');
+        
+        // Choose view based on device type
+        $viewName = $isMobile ? 'staffs.mobile.report-staff-hours' : 'staffs.report-staff-hours';
+        
+        return view($viewName, compact(
             'selectedDate',
             'dates',
             'staffByDepartment',
