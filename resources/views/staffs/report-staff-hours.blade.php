@@ -329,7 +329,8 @@
                                                                                         } elseif (isset($timeRange['start_time']) && isset($timeRange['end_time'])) {
                                                                                             $displayStartTime = $timeRange['start_time'];
                                                                                             $displayEndTime = $timeRange['end_time'];
-                                                                                            $hiddenValue = $displayStartTime . '-' . $displayEndTime;
+                                                                                            // Preserve the full JSON object to maintain notes and other data
+                                                                                            $hiddenValue = json_encode($timeRange);
                                                                                         }
                                                                                     }
                                                                                     // Handle string values
@@ -487,6 +488,17 @@
                                                                                 </div>
                                                                                 @endif
                                                                             </div>
+
+                                                                            <!-- Notes Field -->
+                                                                            @if(!$isOwnRoster && !$isSpecialType)
+                                                                            <div class="notes-container mt-2 mb-2">
+                                                                                <small class="text-muted d-block mb-1" style="font-size: 10px;">Notes:</small>
+                                                                                <textarea class="form-control form-control-sm notes-input" 
+                                                                                         rows="2" 
+                                                                                         placeholder="Add notes for this time entry..."
+                                                                                         style="font-size: 11px; resize: vertical; min-height: 35px; width: 100%;">{{ isset($timeRange['notes']) ? $timeRange['notes'] : '' }}</textarea>
+                                                                            </div>
+                                                                            @endif
                                                                         </div>
                                                                         @empty
                                                                         <!-- Empty time slot for new entries -->
@@ -564,6 +576,17 @@
                                                                                 </div>
                                                                                 @endif
                                                                             </div>
+
+                                                                            <!-- Notes Field for Empty Slot -->
+                                                                            @if(!$isOwnRoster)
+                                                                            <div class="notes-container mt-2 mb-2">
+                                                                                <small class="text-muted d-block mb-1" style="font-size: 10px;">Notes:</small>
+                                                                                <textarea class="form-control form-control-sm notes-input" 
+                                                                                         rows="2" 
+                                                                                         placeholder="Add notes for this time entry..."
+                                                                                         style="font-size: 11px; resize: vertical; min-height: 35px; width: 100%;"></textarea>
+                                                                            </div>
+                                                                            @endif
                                                                         </div>
                                                                         @endforelse
                                                                     </div>
@@ -639,6 +662,10 @@ window.updateHiddenInput = function(container) {
     const endInput = container.querySelector('.time-end');
     const hiddenInput = container.querySelector('input[type="hidden"]');
     const timePickers = container.querySelector('.time-pickers');
+    
+    // Look for notes input in the parent time-slot since it's outside the time-input-container
+    const timeSlot = container.closest('.time-slot');
+    const notesInput = timeSlot ? timeSlot.querySelector('.notes-input') : null;
 
     if (!startInput || !endInput || !hiddenInput) return;
 
@@ -672,6 +699,10 @@ window.updateHiddenInput = function(container) {
                 end_time: endInput.value,
                 type: 'on_call'
             };
+            // Add notes if available
+            if (notesInput && notesInput.value.trim()) {
+                onCallData.notes = notesInput.value.trim();
+            }
             hiddenInput.value = JSON.stringify(onCallData);
         }
         // Check if this is a reception entry
@@ -681,9 +712,23 @@ window.updateHiddenInput = function(container) {
                 end_time: endInput.value,
                 type: 'reception'
             };
+            // Add notes if available
+            if (notesInput && notesInput.value.trim()) {
+                receptionData.notes = notesInput.value.trim();
+            }
             hiddenInput.value = JSON.stringify(receptionData);
         } else {
-            hiddenInput.value = `${startInput.value}-${endInput.value}`;
+            // Always use JSON format for consistency
+            const timeData = {
+                start_time: startInput.value,
+                end_time: endInput.value,
+                type: 'normal'
+            };
+            // Add notes if available
+            if (notesInput && notesInput.value.trim()) {
+                timeData.notes = notesInput.value.trim();
+            }
+            hiddenInput.value = JSON.stringify(timeData);
         }
         window.markAsUnsaved();
     } else if (!startInput.value && !endInput.value) {
@@ -1739,14 +1784,30 @@ function applyQuickFill(container, value) {
 
     // Track changes
     document.addEventListener('input', function(e) {
-        if (e.target.matches('input[type="time"], input[type="text"], input[name^="reception"], select[name^="midnight_phone"]')) {
+        if (e.target.matches('input[type="time"], input[type="text"], textarea.notes-input, input[name^="reception"], select[name^="midnight_phone"]')) {
             markAsUnsaved();
+            
+            // Update hidden input when notes change
+            if (e.target.matches('textarea.notes-input')) {
+                const container = e.target.closest('.time-slot').querySelector('.time-input-container');
+                if (container) {
+                    updateHiddenInput(container);
+                }
+            }
         }
     });
 
     document.addEventListener('change', function(e) {
-        if (e.target.matches('select[name^="midnight_phone"]')) {
+        if (e.target.matches('select[name^="midnight_phone"], textarea.notes-input')) {
             markAsUnsaved();
+            
+            // Update hidden input when notes change
+            if (e.target.matches('textarea.notes-input')) {
+                const container = e.target.closest('.time-slot').querySelector('.time-input-container');
+                if (container) {
+                    updateHiddenInput(container);
+                }
+            }
         }
     });
 
@@ -2863,6 +2924,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const endInput = container.querySelector('.time-end');
             const hiddenInput = container.parentElement.querySelector('input[type="hidden"]');
             
+            // Look for notes input in the parent time-slot since it's outside the time-input-container
+            const timeSlot = container.closest('.time-slot');
+            const notesInput = timeSlot ? timeSlot.querySelector('.notes-input') : null;
+            
             if (!startInput || !endInput || !hiddenInput) return;
             
             if (startInput.disabled && ['V', 'X', 'H'].includes(hiddenInput.value)) {
@@ -2889,12 +2954,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 // Check if this is an on-call entry
+                const timePickers = container.querySelector('.time-pickers');
                 if (timePickers && timePickers.classList.contains('on-call-type')) {
                     const onCallData = {
                         start_time: startInput.value,
                         end_time: endInput.value,
                         type: 'on_call'
                     };
+                    // Add notes if available
+                    if (notesInput && notesInput.value.trim()) {
+                        onCallData.notes = notesInput.value.trim();
+                    }
                     hiddenInput.value = JSON.stringify(onCallData);
                 }
                 // Check if this is a reception entry
@@ -2904,9 +2974,23 @@ document.addEventListener('DOMContentLoaded', function() {
                         end_time: endInput.value,
                         type: 'reception'
                     };
+                    // Add notes if available
+                    if (notesInput && notesInput.value.trim()) {
+                        receptionData.notes = notesInput.value.trim();
+                    }
                     hiddenInput.value = JSON.stringify(receptionData);
                 } else {
-                    hiddenInput.value = `${startInput.value}-${endInput.value}`;
+                    // Always use JSON format for consistency
+                    const timeData = {
+                        start_time: startInput.value,
+                        end_time: endInput.value,
+                        type: 'normal'
+                    };
+                    // Add notes if available
+                    if (notesInput && notesInput.value.trim()) {
+                        timeData.notes = notesInput.value.trim();
+                    }
+                    hiddenInput.value = JSON.stringify(timeData);
                 }
                 window.markAsUnsaved();
             } else if (!startInput.value && !endInput.value) {
@@ -3015,12 +3099,30 @@ document.addEventListener('DOMContentLoaded', function() {
     if (startInput) startInput.classList.remove('is-invalid');
     if (endInput) endInput.classList.remove('is-invalid');
     
+    // Clear notes field
+    const notesTextarea = newTimeSlot.querySelector('.notes-input');
+    if (notesTextarea) {
+        notesTextarea.value = '';
+    }
+    
     // Append the new time slot
     timeSlots.appendChild(newTimeSlot);
     
     // Initialize Flatpickr for the new time inputs immediately
     setTimeout(() => {
         initFlatpickrForContainer(timeInputContainer);
+        
+        // Add event listeners for notes field
+        const notesTextarea = newTimeSlot.querySelector('.notes-input');
+        if (notesTextarea) {
+            notesTextarea.addEventListener('input', function() {
+                const container = newTimeSlot.querySelector('.time-input-container');
+                if (container) {
+                    updateHiddenInput(container);
+                }
+            });
+        }
+        
         markAsUnsaved();
     }, 100);
 };

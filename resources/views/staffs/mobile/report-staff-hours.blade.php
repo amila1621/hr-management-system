@@ -1157,6 +1157,18 @@ function addTimeSlot(staffId, dateString) {
                     <button type="button" class="btn btn-outline-primary btn-sm" onclick="applyQuickFill(this, 'regular')" title="Regular Hours">⏰</button>
                 </div>
             </div>
+            
+            <!-- Notes Field -->
+            <div class="mt-3">
+                <label class="form-label small text-muted" style="color: #a8b5c8;">
+                    <i class="fas fa-sticky-note me-1"></i>Notes (Optional)
+                </label>
+                <textarea class="form-control form-control-mobile notes-input" 
+                         rows="2" 
+                         placeholder="Add notes for this time entry..."
+                         onchange="updateTimeRangeWithNotes(this)"
+                         style="font-size: 14px; background-color: #2d3748; border-color: #4a5568; color: #e2e8f0;"></textarea>
+            </div>
         </div>
     `;
     
