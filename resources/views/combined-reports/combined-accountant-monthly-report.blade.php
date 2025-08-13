@@ -108,7 +108,9 @@
         </div>
     </div>
 </div>
-    <script>
+
+@push('scripts')
+<script>
     // Helper function to convert HH:MM to minutes
     function timeToMinutes(timeStr) {
         if (!timeStr || timeStr === '0:00' || timeStr === '00:00') return 0;
@@ -123,17 +125,37 @@
         return hours.toString().padStart(2, '0') + ':' + mins.toString().padStart(2, '0');
     }
 
-    $('#datatable-buttons').DataTable({
-        buttons: [
-            {
-                extend: 'csv',
-                text: 'Export CSV',
-                customize: function(csv) {
-                    // Replace multiple spaces with single line break
-                    return csv.replace(/\s{2,}/g, '\n');
+    // Wait for document ready and ensure DataTables is loaded
+    $(document).ready(function() {
+        // Destroy existing DataTable if it exists
+        if ($.fn.DataTable.isDataTable('#datatable-buttons')) {
+            $('#datatable-buttons').DataTable().destroy();
+        }
+        
+        // Initialize DataTable with custom configuration
+        $('#datatable-buttons').DataTable({
+            lengthChange: true,
+            searching: true,
+            pageLength: 100,
+            paging: false,
+            ordering: true,
+            info: false,
+            buttons: [
+                'copy', 'csv', 'excel', 'pdf', 'print'
+            ],
+            columnDefs: [
+                {
+                    targets: '_all', // All columns
+                    orderable: false // Disable sorting for all columns by default
+                },
+                {
+                    targets: 1, // Full Name column (0-indexed, so column 1)
+                    orderable: true // Enable sorting only for Full Name column
                 }
-            }
-        ]
+            ],
+            order: [[1, 'asc']] // Default sort by Full Name column in ascending order
+        });
     });
-    </script>
+</script>
+@endpush
 @endsection

@@ -179,6 +179,8 @@ $(document).ready(function() {
 
     @endif
 </script>
+
+@stack('scripts')
 </body>
 
 </html>
