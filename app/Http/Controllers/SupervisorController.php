@@ -1338,36 +1338,17 @@ class SupervisorController extends Controller
                                     $timeData = json_decode($timeRange, true);
                                     if (json_last_error() === JSON_ERROR_NONE && isset($timeData['start_time']) && isset($timeData['end_time'])) {
 
-                                        // For special type entries (on_call, reception), only include original times if they actually exist in the data
-                                        if (isset($timeData['type']) && in_array($timeData['type'], ['on_call', 'reception'])) {
-                                            $formattedEntry = [
-                                                'start_time' => $timeData['start_time'],
-                                                'end_time' => $timeData['end_time'],
-                                                'type' => $timeData['type']
-                                            ];
-
-                                            // Only add original times if they exist AND are different from current times
-                                            if (
-                                                isset($timeData['original_start_time']) &&
-                                                isset($timeData['original_end_time']) &&
-                                                ($timeData['original_start_time'] !== $timeData['start_time'] ||
-                                                    $timeData['original_end_time'] !== $timeData['end_time'])
-                                            ) {
-                                                $formattedEntry['original_start_time'] = $timeData['original_start_time'];
-                                                $formattedEntry['original_end_time'] = $timeData['original_end_time'];
-                                            }
-
-                                            $formattedHours[] = $formattedEntry;
-                                        } else {
-                                            // For other JSON entries (normal time updates), include original times as before
-                                            $formattedHours[] = [
-                                                'start_time' => $timeData['start_time'],
-                                                'end_time' => $timeData['end_time'],
-                                                'type' => $isSickLeave ? 'SL' : ($timeData['type'] ?? 'normal'),
-                                                'original_start_time' => $timeData['original_start_time'] ?? $timeData['start_time'],
-                                                'original_end_time' => $timeData['original_end_time'] ?? $timeData['end_time']
-                                            ];
+                                        // Debug: Log the received time data
+                                        if (isset($timeData['notes'])) {
+                                            Log::info('Time entry with notes received', [
+                                                'staff_id' => $staffId,
+                                                'date' => $date,
+                                                'time_data' => $timeData
+                                            ]);
                                         }
+
+                                        // Use helper function to process time data with notes
+                                        $formattedHours[] = $this->processTimeDataWithNotes($timeData, $isSickLeave);
                                         continue;
                                     }
                                 } catch (\Exception $e) {
@@ -1565,14 +1546,48 @@ class SupervisorController extends Controller
         }
 
         if (preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]-([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $timeRange)) {
-            list($start, $end) = explode('-', $timeRange);
-            $startTime = Carbon::createFromFormat('H:i', $start);
-            $endTime = Carbon::createFromFormat('H:i', $end);
-
-            return $endTime->gt($startTime);
+            $times = explode('-', $timeRange);
+            return count($times) === 2;
         }
 
         return false;
+    }
+    
+    /**
+     * Process time data and include notes if available
+     */
+    private function processTimeDataWithNotes($timeData, $isSickLeave = false)
+    {
+        $formattedEntry = [
+            'start_time' => $timeData['start_time'],
+            'end_time' => $timeData['end_time'],
+            'type' => $isSickLeave ? 'SL' : ($timeData['type'] ?? 'normal')
+        ];
+
+        // For special types (on_call, reception), only add original times if they exist and are different
+        if (isset($timeData['type']) && in_array($timeData['type'], ['on_call', 'reception'])) {
+            // Only add original times if they exist AND are different from current times
+            if (
+                isset($timeData['original_start_time']) &&
+                isset($timeData['original_end_time']) &&
+                ($timeData['original_start_time'] !== $timeData['start_time'] ||
+                    $timeData['original_end_time'] !== $timeData['end_time'])
+            ) {
+                $formattedEntry['original_start_time'] = $timeData['original_start_time'];
+                $formattedEntry['original_end_time'] = $timeData['original_end_time'];
+            }
+        } else {
+            // For normal entries, add original times if they exist, otherwise use current times
+            $formattedEntry['original_start_time'] = $timeData['original_start_time'] ?? $timeData['start_time'];
+            $formattedEntry['original_end_time'] = $timeData['original_end_time'] ?? $timeData['end_time'];
+        }
+
+        // Add notes if present
+        if (isset($timeData['notes']) && !empty(trim($timeData['notes']))) {
+            $formattedEntry['notes'] = trim($timeData['notes']);
+        }
+
+        return $formattedEntry;
     }
 
     public function displaySchedule()

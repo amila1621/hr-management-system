@@ -1301,6 +1301,9 @@ function saveDay(staffId, dateString) {
     MobileApp.confirm(`Save changes for ${dateString}?`, () => {
         MobileApp.showLoading('Saving...');
         
+        // Disable beforeunload to prevent double confirmation
+        hasUnsavedChanges = false;
+        
         // Get the active department form and submit it
         const activeDepartment = document.querySelector('.department-content.active');
         const form = activeDepartment.querySelector('.mobile-department-form');
@@ -1320,11 +1323,23 @@ function saveAllChanges() {
     MobileApp.confirm('Save all changes for this week?', () => {
         MobileApp.showLoading('Saving all changes...');
         
+        // Disable beforeunload to prevent double confirmation
+        hasUnsavedChanges = false;
+        
         // Get the active department form and submit it
         const activeDepartment = document.querySelector('.department-content.active');
         const form = activeDepartment.querySelector('.mobile-department-form');
         
         if (form) {
+            // Debug: Log form data before submission
+            const formData = new FormData(form);
+            console.log('📋 Form data being submitted (saveAllChanges):');
+            for (let [key, value] of formData.entries()) {
+                if (key.includes('hours[') && value.startsWith('{')) {
+                    console.log(`${key}: ${value}`);
+                }
+            }
+            
             // Submit the form
             form.submit();
         } else {

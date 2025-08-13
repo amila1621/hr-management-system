@@ -30,7 +30,8 @@
             } elseif (isset($timeRange['start_time']) && isset($timeRange['end_time'])) {
                 $displayStartTime = $timeRange['start_time'];
                 $displayEndTime = $timeRange['end_time'];
-                $hiddenValue = $displayStartTime . '-' . $displayEndTime;
+                // Preserve the full JSON object to maintain notes and other data
+                $hiddenValue = json_encode($timeRange);
             }
         } elseif (is_string($timeRange)) {
             if (in_array($timeRange, ['V', 'X', 'H', 'SL'])) {
@@ -187,6 +188,20 @@
         </div>
     @endif
     
+    <!-- Notes Field -->
+    @if(!$isOwnRoster)
+        <div class="mt-3">
+            <label class="form-label small text-muted" style="color: #a8b5c8;">
+                <i class="fas fa-sticky-note me-1"></i>Notes (Optional)
+            </label>
+            <textarea class="form-control form-control-mobile notes-input" 
+                     rows="2" 
+                     placeholder="Add notes for this time entry..."
+                     onchange="updateTimeRangeWithNotes(this)"
+                     style="font-size: 14px; background-color: #2d3748; border-color: #4a5568; color: #e2e8f0;">{{ isset($timeRange['notes']) ? $timeRange['notes'] : '' }}</textarea>
+        </div>
+    @endif
+    
     @if($isOwnRoster)
         <!-- Restricted Access Message -->
         <div class="mt-2 text-center">
@@ -204,6 +219,7 @@ function updateTimeRange(input) {
     const startInput = container.querySelector('.time-start');
     const endInput = container.querySelector('.time-end');
     const hiddenInput = container.querySelector('.time-range-input');
+    const notesInput = container.querySelector('.notes-input');
     
     if (startInput && endInput && hiddenInput) {
         if (startInput.value && endInput.value) {
@@ -213,12 +229,50 @@ function updateTimeRange(input) {
                 return;
             }
             
-            hiddenInput.value = `${startInput.value}-${endInput.value}`;
+            // Always create JSON object to preserve notes
+            const timeData = {
+                start_time: startInput.value,
+                end_time: endInput.value,
+                type: 'normal'
+            };
+            
+            // Add notes if available
+            if (notesInput && notesInput.value.trim()) {
+                timeData.notes = notesInput.value.trim();
+            }
+            
+            hiddenInput.value = JSON.stringify(timeData);
             hasUnsavedChanges = true;
             MobileApp.vibrate([30]);
         } else {
             hiddenInput.value = '';
         }
+    }
+}
+
+// Update time range with notes only
+function updateTimeRangeWithNotes(notesInput) {
+    const container = notesInput.closest('.time-picker-group');
+    const startInput = container.querySelector('.time-start');
+    const endInput = container.querySelector('.time-end');
+    const hiddenInput = container.querySelector('.time-range-input');
+    
+    if (startInput && endInput && hiddenInput && startInput.value && endInput.value) {
+        // Always create JSON object to preserve all data
+        const timeData = {
+            start_time: startInput.value,
+            end_time: endInput.value,
+            type: 'normal'
+        };
+        
+        // Add notes if available
+        if (notesInput.value.trim()) {
+            timeData.notes = notesInput.value.trim();
+        }
+        
+        hiddenInput.value = JSON.stringify(timeData);
+        hasUnsavedChanges = true;
+        MobileApp.vibrate([30]);
     }
 }
 
@@ -236,11 +290,13 @@ function applyQuickFill(button, value) {
     const hiddenInput = container.querySelector('.time-range-input');
     const startInput = container.querySelector('.time-start');
     const endInput = container.querySelector('.time-end');
+    const notesInput = container.querySelector('.notes-input');
     
     console.log('📋 Found elements:', {
         hiddenInput: !!hiddenInput,
         startInput: !!startInput,
-        endInput: !!endInput
+        endInput: !!endInput,
+        notesInput: !!notesInput
     });
     
     switch(value) {
@@ -270,6 +326,10 @@ function applyQuickFill(button, value) {
                 end_time: '17:00',
                 type: 'on_call'
             };
+            // Add notes if available
+            if (notesInput && notesInput.value.trim()) {
+                onCallData.notes = notesInput.value.trim();
+            }
             if (hiddenInput) hiddenInput.value = JSON.stringify(onCallData);
             if (startInput) startInput.value = '09:00';
             if (endInput) endInput.value = '17:00';
@@ -284,6 +344,10 @@ function applyQuickFill(button, value) {
                 end_time: '17:00',
                 type: 'reception'
             };
+            // Add notes if available
+            if (notesInput && notesInput.value.trim()) {
+                receptionData.notes = notesInput.value.trim();
+            }
             if (hiddenInput) hiddenInput.value = JSON.stringify(receptionData);
             if (startInput) startInput.value = '09:00';
             if (endInput) endInput.value = '17:00';
@@ -295,7 +359,19 @@ function applyQuickFill(button, value) {
             console.log('⏰ Setting regular hours');
             if (startInput) startInput.value = '09:00';
             if (endInput) endInput.value = '17:00';
-            if (hiddenInput) hiddenInput.value = '09:00-17:00';
+            
+            // Always use JSON format for consistency
+            const regularData = {
+                start_time: '09:00',
+                end_time: '17:00',
+                type: 'normal'
+            };
+            // Add notes if available
+            if (notesInput && notesInput.value.trim()) {
+                regularData.notes = notesInput.value.trim();
+            }
+            if (hiddenInput) hiddenInput.value = JSON.stringify(regularData);
+            
             hasUnsavedChanges = true;
             console.log('✅ Applied regular hours successfully');
             break;
