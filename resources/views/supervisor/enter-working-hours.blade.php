@@ -1833,6 +1833,13 @@
                 });
 
                 if (submitResult.isConfirmed) {
+                    // CRITICAL FIX: Update all hidden inputs to reflect current UI state before submission
+                    // This ensures notes and any other UI changes are captured even if no explicit changes were tracked
+                    const allTimeInputContainers = form.querySelectorAll('.time-input-container');
+                    allTimeInputContainers.forEach(container => {
+                        updateHiddenInput(container);
+                    });
+                    
                     window.hasUnsavedChanges = false; // Reset the flag
                     form.submit(); // Actually submit the form
                 }
@@ -2082,7 +2089,34 @@
                         button.disabled = true;
                         button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Approving...';
                         
-                        // Make Ajax request
+                        // FIXED: Collect current data before approval to capture any modifications
+                        const staffRow = button.closest('tr');
+                        const currentData = {};
+                        
+                        // First, update all hidden inputs to reflect current UI state before collecting data
+                        const timeInputContainers = staffRow.querySelectorAll('.time-input-container');
+                        timeInputContainers.forEach(container => {
+                            updateHiddenInput(container);
+                        });
+                        
+                        // Get all hidden inputs for this staff member and date
+                        const hiddenInputs = staffRow.querySelectorAll(`input[type="hidden"][name*="hours[${staffId}][${date}]"]`);
+                        hiddenInputs.forEach((input, index) => {
+                            if (input.value) {
+                                currentData[`timeSlot_${index}`] = input.value;
+                            }
+                        });
+                        
+                        // Get any notes for this staff member and date (as backup)
+                        const notesInputs = staffRow.querySelectorAll('textarea.notes-input');
+                        const notesData = {};
+                        notesInputs.forEach((textarea, index) => {
+                            if (textarea.value.trim()) {
+                                notesData[`notes_${index}`] = textarea.value.trim();
+                            }
+                        });
+
+                        // Make Ajax request with current data
                         fetch('{{ route("supervisor.approve-employee") }}', {
                             method: 'POST',
                             headers: {
@@ -2091,7 +2125,9 @@
                             },
                             body: JSON.stringify({
                                 staff_id: staffId,
-                                date: date
+                                date: date,
+                                current_data: currentData,
+                                notes_data: notesData
                             })
                         })
                         .then(response => response.json())

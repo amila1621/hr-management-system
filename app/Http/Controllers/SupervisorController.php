@@ -1066,16 +1066,28 @@ class SupervisorController extends Controller
                                                 $formattedEntry['original_end_time'] = $timeData['original_end_time'];
                                             }
 
+                                            // FIXED: Preserve notes for special type entries
+                                            if (isset($timeData['notes']) && !empty($timeData['notes'])) {
+                                                $formattedEntry['notes'] = $timeData['notes'];
+                                            }
+
                                             $formattedHours[] = $formattedEntry;
                                         } else {
                                             // For other JSON entries (normal time updates), include original times as before
-                                            $formattedHours[] = [
+                                            $formattedEntry = [
                                                 'start_time' => $timeData['start_time'],
                                                 'end_time' => $timeData['end_time'],
                                                 'type' => $isSickLeave ? 'SL' : ($timeData['type'] ?? 'normal'),
                                                 'original_start_time' => $timeData['original_start_time'] ?? $timeData['start_time'],
                                                 'original_end_time' => $timeData['original_end_time'] ?? $timeData['end_time']
                                             ];
+                                            
+                                            // FIXED: Preserve notes for regular time entries
+                                            if (isset($timeData['notes']) && !empty($timeData['notes'])) {
+                                                $formattedEntry['notes'] = $timeData['notes'];
+                                            }
+                                            
+                                            $formattedHours[] = $formattedEntry;
                                         }
                                         continue;
                                     }
@@ -1104,6 +1116,35 @@ class SupervisorController extends Controller
                             $existingRecord = StaffMonthlyHours::where('staff_id', $staffId)
                                 ->where('date', $date)
                                 ->first();
+
+                            // CRITICAL FIX: Preserve existing notes when new data doesn't include them
+                            if ($existingRecord && !empty($existingRecord->hours_data)) {
+                                $existingHoursData = $existingRecord->hours_data;
+                                
+                                // Merge notes from existing data into new data where missing
+                                foreach ($formattedHours as $index => &$newEntry) {
+                                    if (isset($existingHoursData[$index])) {
+                                        $existingEntry = $existingHoursData[$index];
+                                        
+                                        // If new entry doesn't have notes but existing does, preserve them
+                                        if (!isset($newEntry['notes']) && isset($existingEntry['notes']) && !empty($existingEntry['notes'])) {
+                                            $newEntry['notes'] = $existingEntry['notes'];
+                                        }
+                                    }
+                                }
+                                
+                                // If new data has fewer entries than existing, preserve remaining entries with notes
+                                if (count($existingHoursData) > count($formattedHours)) {
+                                    for ($i = count($formattedHours); $i < count($existingHoursData); $i++) {
+                                        if (isset($existingHoursData[$i]) && isset($existingHoursData[$i]['notes'])) {
+                                            // Only preserve if the entry has meaningful data (not just notes)
+                                            if (isset($existingHoursData[$i]['start_time']) || isset($existingHoursData[$i]['type'])) {
+                                                $formattedHours[] = $existingHoursData[$i];
+                                            }
+                                        }
+                                    }
+                                }
+                            }
 
                             // Determine approval status based on user role and data changes
                             $isApproved = 1; // Default for supervisors
@@ -1578,6 +1619,8 @@ class SupervisorController extends Controller
         try {
             $date = $request->input('date');
             $staffId = $request->input('staff_id');
+            $currentData = $request->input('current_data', []);
+            $notesData = $request->input('notes_data', []);
 
             // Validate input
             if (!$date || !$staffId) {
@@ -1605,9 +1648,67 @@ class SupervisorController extends Controller
                 ->first();
 
             if ($staffHours) {
-                // Approve the record - IMPORTANT: Preserve all existing data including notes
+                // FIXED: Update the hours data with any modifications made before approval
+                if (!empty($currentData)) {
+                    $updatedHoursData = [];
+                    
+                    foreach ($currentData as $slotKey => $timeValue) {
+                        if (empty($timeValue)) continue;
+                        
+                        // Handle special values (V, X, H)
+                        if (in_array($timeValue, ['V', 'X', 'H'])) {
+                            $updatedHoursData[] = [
+                                'type' => $timeValue,
+                                'start_time' => null,
+                                'end_time' => null
+                            ];
+                            continue;
+                        }
+                        
+                        // Handle JSON format entries (with notes)
+                        if (substr($timeValue, 0, 1) === '{') {
+                            try {
+                                $timeData = json_decode($timeValue, true);
+                                if (json_last_error() === JSON_ERROR_NONE && isset($timeData['start_time']) && isset($timeData['end_time'])) {
+                                    $updatedHoursData[] = $timeData;
+                                    continue;
+                                }
+                            } catch (\Exception $e) {
+                                Log::error('Failed to parse time range JSON during approval', [
+                                    'timeValue' => $timeValue,
+                                    'error' => $e->getMessage()
+                                ]);
+                            }
+                        }
+                        
+                        // Handle simple time ranges
+                        if (strpos($timeValue, '-') !== false) {
+                            list($start, $end) = explode('-', $timeValue);
+                            $entry = [
+                                'start_time' => trim($start),
+                                'end_time' => trim($end),
+                                'type' => 'normal'
+                            ];
+                            
+                            // Add notes if available for this slot
+                            $slotIndex = str_replace('timeSlot_', '', $slotKey);
+                            $notesKey = "notes_{$slotIndex}";
+                            if (isset($notesData[$notesKey])) {
+                                $entry['notes'] = $notesData[$notesKey];
+                            }
+                            
+                            $updatedHoursData[] = $entry;
+                        }
+                    }
+                    
+                    // Update the hours data with the modified data
+                    if (!empty($updatedHoursData)) {
+                        $staffHours->hours_data = $updatedHoursData;
+                    }
+                }
+                
+                // Approve the record
                 $staffHours->is_approved = 1;
-                // DO NOT modify hours_data - keep all existing data including notes
                 $staffHours->save();
                 
                 DB::commit();
