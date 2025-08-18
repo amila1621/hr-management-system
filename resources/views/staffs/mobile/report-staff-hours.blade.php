@@ -117,7 +117,7 @@
                 @php
                     $dateString = $date->format('Y-m-d');
                     $hoursData = $staffHours[$staff->id][$dateString]['hours_data'] ?? [];
-                    $isApproved = $staffHours[$staff->id][$dateString]['is_approved'] ?? 1;
+                    $isApproved = isset($staffHours[$staff->id][$dateString]) ? $staffHours[$staff->id][$dateString]['is_approved'] : null;
                     $staffDateKey = $staff->id . '_' . $dateString;
                     $sickLeaveInfo = $sickLeaveStatuses[$staffDateKey] ?? null;
                 @endphp
@@ -175,22 +175,40 @@
                                         'index' => 0,
                                         'staff' => $staff,
                                         'dateString' => $dateString,
-                                        'isApproved' => 1
+                                        'isApproved' => $isApproved
                                     ])
                                 </div>
                             @endforelse
                             
                             <!-- Add Time Slot Button -->
-                            <button type="button" class="btn btn-mobile w-100 mb-3" style="background: #28a745; color: white; border: none;" 
-                                    onclick="addTimeSlot('{{ $staff->id }}', '{{ $dateString }}')">
-                                <i class="fas fa-plus-circle me-2"></i>Add Time Slot
-                            </button>
+                            @if($isApproved !== 1)
+                                <button type="button" class="btn btn-mobile w-100 mb-3" style="background: #28a745; color: white; border: none;" 
+                                        onclick="addTimeSlot('{{ $staff->id }}', '{{ $dateString }}')">
+                                    <i class="fas fa-plus-circle me-2"></i>Add Time Slot
+                                </button>
+                            @else
+                                <button type="button" class="btn btn-mobile w-100 mb-3 disabled" 
+                                        style="background: #6c757d; color: white; border: none; cursor: not-allowed;" 
+                                        disabled
+                                        title="Cannot add time slots to approved records">
+                                    <i class="fas fa-lock me-2"></i>Record Approved - Cannot Add Slots
+                                </button>
+                            @endif
                             
                             <!-- Save Day Button -->
-                            <button type="button" class="btn btn-mobile w-100" style="background: #23cbe0; color: white; border: none;" 
-                                    onclick="saveDay('{{ $staff->id }}', '{{ $dateString }}')">
-                                <i class="fas fa-save me-2"></i>Save {{ $date->format('D') }}
-                            </button>
+                            @if($isApproved !== 1)
+                                <button type="button" class="btn btn-mobile w-100" style="background: #23cbe0; color: white; border: none;" 
+                                        onclick="saveDay('{{ $staff->id }}', '{{ $dateString }}')">
+                                    <i class="fas fa-save me-2"></i>Save {{ $date->format('D') }}
+                                </button>
+                            @else
+                                <button type="button" class="btn btn-mobile w-100 disabled" 
+                                        style="background: #6c757d; color: white; border: none; cursor: not-allowed;" 
+                                        disabled
+                                        title="Cannot save changes to approved records">
+                                    <i class="fas fa-lock me-2"></i>Record Approved - No Changes Allowed
+                                </button>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -1114,7 +1132,7 @@ function showPreviousStaff() {
 function addTimeSlot(staffId, dateString) {
     console.log(`🟢 addTimeSlot called for staff ${staffId}, date ${dateString}`);
     
-    // Find the active day content specifically
+    // CRITICAL FIX: Check if this day has approved records - prevent adding new time slots
     const activeStaffCard = document.querySelector('.staff-card.active');
     if (!activeStaffCard) {
         console.error('❌ No active staff card found');
@@ -1123,6 +1141,22 @@ function addTimeSlot(staffId, dateString) {
     }
     
     const dayContent = activeStaffCard.querySelector(`.day-content[data-date="${dateString}"].active`);
+    if (dayContent) {
+        // Check if any time entries in this day have approved inputs
+        const approvedInputs = dayContent.querySelectorAll('.approved-input');
+        if (approvedInputs.length > 0) {
+            MobileApp.showError('Cannot add new time slots to approved records. Contact your supervisor for changes.');
+            return;
+        }
+        
+        // Also check if any time entries have the approved class
+        const approvedEntries = dayContent.querySelectorAll('.time-entry.approved');
+        if (approvedEntries.length > 0) {
+            MobileApp.showError('Cannot add new time slots to approved records. Contact your supervisor for changes.');
+            return;
+        }
+    }
+    
     if (!dayContent) {
         console.error(`❌ Day content not found for ${dateString}`);
         MobileApp.showError(`Day content not found for ${dateString}`);
@@ -1344,6 +1378,27 @@ function addTimeSlot(staffId, dateString) {
 
 // Save individual day
 function saveDay(staffId, dateString) {
+    // CRITICAL FIX: Check if this day has approved records - prevent saving changes
+    const activeStaffCard = document.querySelector('.staff-card.active');
+    if (activeStaffCard) {
+        const dayContent = activeStaffCard.querySelector(`.day-content[data-date="${dateString}"].active`);
+        if (dayContent) {
+            // Check if any time entries in this day have approved inputs
+            const approvedInputs = dayContent.querySelectorAll('.approved-input');
+            if (approvedInputs.length > 0) {
+                MobileApp.showError('Cannot save changes to approved records. Contact your supervisor for modifications.');
+                return;
+            }
+            
+            // Also check if any time entries have the approved class
+            const approvedEntries = dayContent.querySelectorAll('.time-entry.approved');
+            if (approvedEntries.length > 0) {
+                MobileApp.showError('Cannot save changes to approved records. Contact your supervisor for modifications.');
+                return;
+            }
+        }
+    }
+    
     MobileApp.confirm(`Save changes for ${dateString}?`, () => {
         MobileApp.showLoading('Saving...');
         
@@ -1366,6 +1421,20 @@ function saveDay(staffId, dateString) {
 
 // Save all changes
 function saveAllChanges() {
+    // CRITICAL FIX: Check if any records are approved - prevent saving if there are approved records
+    const approvedInputs = document.querySelectorAll('.approved-input');
+    if (approvedInputs.length > 0) {
+        MobileApp.showError('Cannot save changes when approved records exist. Contact your supervisor to modify approved entries.');
+        return;
+    }
+    
+    // Also check if any time entries have the approved class
+    const approvedEntries = document.querySelectorAll('.time-entry.approved');
+    if (approvedEntries.length > 0) {
+        MobileApp.showError('Cannot save changes when approved records exist. Contact your supervisor to modify approved entries.');
+        return;
+    }
+    
     MobileApp.confirm('Save all changes for this week?', () => {
         MobileApp.showLoading('Saving all changes...');
         
