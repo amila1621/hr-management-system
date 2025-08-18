@@ -1737,6 +1737,74 @@ class StaffController extends Controller
             })->values();
 
             $displayMidnightPhone = Supervisors::where('user_id', Auth::user()->id)->first()->display_midnight_phone;
+        } elseif (Auth::user()->role == 'hr-assistant') {
+            // Set department for HR Assistant
+            $supervisorDepartments = ['Guide Supervisor'];
+
+            // Check if HR Assistant already exists in staff_users table
+            $existingStaff = StaffUser::where('user_id', Auth::user()->id)->first();
+
+            if ($existingStaff) {
+                // If exists, mark as hr-assistant and ensure it's in the collection
+                $existingStaff->setAttribute('is_hr_assistant', true);
+                $existingStaff->setAttribute('rank', 1); // For sorting
+                $staffMembers = collect([$existingStaff]);
+            } else {
+                // Create a new StaffUser record for this HR Assistant
+                $hrAssistant = HrAssistants::where('user_id', Auth::user()->id)->first();
+                $newStaff = StaffUser::create([
+                    'name' => Auth::user()->name,
+                    'full_name' => Auth::user()->name,
+                    'email' => Auth::user()->email,
+                    'department' => 'Guide Supervisor',
+                    'phone_number' => $hrAssistant->phone_number ?? '',
+                    'is_supervisor' => false,
+                    'rate' => $hrAssistant->rate ?? '',
+                    'user_id' => Auth::user()->id,
+                    'color' => $hrAssistant->color ?? "#" . substr(md5(rand()), 0, 6),
+                    'allow_report_hours' => $hrAssistant->allow_report_hours ?? 1,
+                ]);
+
+                $newStaff->setAttribute('is_hr_assistant', true);
+                $newStaff->setAttribute('rank', 1);
+                $staffMembers = collect([$newStaff]);
+            }
+
+            $displayMidnightPhone = false; // HR assistants don't display midnight phone
+        } elseif (Auth::user()->role == 'team-lead') {
+            // Set department for Team Lead
+            $supervisorDepartments = ['Bus Driver Supervisor'];
+
+            // Check if Team Lead already exists in staff_users table
+            $existingStaff = StaffUser::where('user_id', Auth::user()->id)->first();
+
+            if ($existingStaff) {
+                // If exists, mark as team-lead and ensure it's in the collection
+                $existingStaff->setAttribute('is_team_lead', true);
+                $existingStaff->setAttribute('rank', 1); // For sorting
+                $staffMembers = collect([$existingStaff]);
+            } else {
+                // Create a new StaffUser record for this Team Lead
+                $teamLead = TeamLeads::where('user_id', Auth::user()->id)->first();
+                $newStaff = StaffUser::create([
+                    'name' => Auth::user()->name,
+                    'full_name' => Auth::user()->name,
+                    'email' => Auth::user()->email,
+                    'department' => 'Bus Driver Supervisor',
+                    'phone_number' => $teamLead->phone_number ?? '',
+                    'is_supervisor' => false,
+                    'rate' => $teamLead->rate ?? '',
+                    'user_id' => Auth::user()->id,
+                    'color' => $teamLead->color ?? "#" . substr(md5(rand()), 0, 6),
+                    'allow_report_hours' => $teamLead->allow_report_hours ?? 1,
+                ]);
+
+                $newStaff->setAttribute('is_team_lead', true);
+                $newStaff->setAttribute('rank', 1);
+                $staffMembers = collect([$newStaff]);
+            }
+
+            $displayMidnightPhone = false; // Team leads don't display midnight phone
         } else {
             // For regular staff users who have allow_report_hours permission
             $currentStaffUser = null;
@@ -1786,6 +1854,7 @@ class StaffController extends Controller
         // Filter StaffHoursDetails by supervisor's departments (or all for admin)
         $receptionData = [];
         $midnightPhoneData = [];
+        $organizedReceptionData = [];
 
         if (Auth::user()->role == 'admin') {
             // Admin sees all departments
@@ -1801,10 +1870,44 @@ class StaffController extends Controller
                 ->get();
         }
 
-        foreach ($staffHoursDetails as $detail) {
-            $dateString = $detail->date->format('Y-m-d');
-            $receptionData[$dateString] = $detail->reception;
-            $midnightPhoneData[$dateString] = $detail->midnight_phone[0] ?? null;
+        // Organize reception data by department AND date for hr-assistants and team-leads
+        if (Auth::user()->role == 'hr-assistant' || Auth::user()->role == 'team-lead') {
+            foreach ($staffHoursDetails as $detail) {
+                $dateString = $detail->date->format('Y-m-d');
+                $department = $detail->department;
+
+                if (!isset($organizedReceptionData[$dateString])) {
+                    $organizedReceptionData[$dateString] = [];
+                }
+
+                $organizedReceptionData[$dateString][$department] = $detail->reception;
+                $midnightPhoneData[$dateString] = null; // Not used for HR assistants/team leads
+            }
+
+            // Create the final receptionData structure that the view expects
+            foreach ($dates as $date) {
+                $dateString = $date->format('Y-m-d');
+
+                // For each department
+                foreach ($supervisorDepartments as $department) {
+                    if (isset($organizedReceptionData[$dateString][$department])) {
+                        $receptionData[$dateString] = $organizedReceptionData[$dateString][$department];
+                        break; // Use the first department's data as default
+                    }
+                }
+
+                // If no data found, initialize empty
+                if (!isset($receptionData[$dateString])) {
+                    $receptionData[$dateString] = '';
+                }
+            }
+        } else {
+            // Standard logic for other roles
+            foreach ($staffHoursDetails as $detail) {
+                $dateString = $detail->date->format('Y-m-d');
+                $receptionData[$dateString] = $detail->reception;
+                $midnightPhoneData[$dateString] = $detail->midnight_phone[0] ?? null;
+            }
         }
 
         $holidays = Holiday::whereBetween('holiday_date', [$weekStart, $weekEnd])->pluck('holiday_date');
@@ -1873,6 +1976,7 @@ class StaffController extends Controller
             'staffHours',
             'holidays',
             'receptionData',
+            'organizedReceptionData', // Add this for department-specific access in the view
             'midnightPhoneData',
             'displayMidnightPhone',
             'sickLeaveStatuses'

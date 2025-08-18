@@ -247,7 +247,10 @@ Route::middleware(['auth','activity'])->group(function () {
 
 
     Route::get('/supervisor/enter-working-hours', [SupervisorController::class, 'enterWorkingHours'])->name('supervisor.enter-working-hours');
-    Route::get('/guide-supervisor/enter-working-hours', [SupervisorController::class, 'enterWorkingHoursGuideSupervisor'])->name('guide-supervisor.enter-working-hours');
+    // Redirect old route to consolidated staff report hours route
+    Route::get('/guide-supervisor/enter-working-hours', function() {
+        return redirect()->route('staff.report-hours');
+    })->name('guide-supervisor.enter-working-hours');
     Route::post('/supervisor/enter-working-hours', [SupervisorController::class, 'storeWorkingHours'])->name('supervisor.working-hours.store');
     Route::post('/staff/enter-working-hours', [SupervisorController::class, 'staffStoreWorkingHours'])->name('staff.working-hours.store');
     Route::get('/am-supervisor/enter-working-hours', [SupervisorController::class, 'amEnterWorkingHours'])->name('am-supervisor.enter-working-hours');

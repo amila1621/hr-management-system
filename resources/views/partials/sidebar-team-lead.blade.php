@@ -8,7 +8,7 @@ $pendingSickLeaveCount = \App\Models\SupervisorSickLeaves::where('admin_id', nul
 
 
 <li>
-    <a href="{{ route('guide-supervisor.enter-working-hours') }}" class="waves-effect">
+    <a href="{{ route('staff.report-hours') }}" class="waves-effect">
         <i class="fas fa-tasks"></i><span> Manage Roster </span>
     </a>
 </li>
