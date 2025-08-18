@@ -123,15 +123,27 @@ class StaffController extends Controller
         }
 
         // Get staff members for the selected department
-        $staffMembers = StaffUser::where(function ($query) use ($selectedDepartment) {
-            $query->where('department', 'LIKE', $selectedDepartment)
-                ->orWhere('department', 'LIKE', $selectedDepartment . ',%')
-                ->orWhere('department', 'LIKE', '%, ' . $selectedDepartment)
-                ->orWhere('department', 'LIKE', '%, ' . $selectedDepartment . ',%');
-        })->get();
+        // RESTRICTION: For GA, Sauna Base, and Purchase Team employees, only show their own roster
+        $restrictedDepartments = ['GA', 'Sauna Base', 'Purchase Team'];
+        $isRestrictedEmployee = Auth::user()->role !== 'supervisor' && 
+                               in_array($selectedDepartment, $restrictedDepartments);
+        
+        if ($isRestrictedEmployee) {
+            // Only show the current user's own record
+            $staffMembers = StaffUser::where('id', $currentStaffMember->id)->get();
+        } else {
+            // Show all staff members in the department (normal behavior)
+            $staffMembers = StaffUser::where(function ($query) use ($selectedDepartment) {
+                $query->where('department', 'LIKE', $selectedDepartment)
+                    ->orWhere('department', 'LIKE', $selectedDepartment . ',%')
+                    ->orWhere('department', 'LIKE', '%, ' . $selectedDepartment)
+                    ->orWhere('department', 'LIKE', '%, ' . $selectedDepartment . ',%');
+            })->get();
+        }
 
         // UPDATED: For non-supervisors, add their supervisor to the top of the list
-        if (Auth::user()->role !== 'supervisor' && isset($supervisor)) {
+        // BUT NOT for restricted departments (GA, Sauna Base, Purchase Team)
+        if (Auth::user()->role !== 'supervisor' && isset($supervisor) && !$isRestrictedEmployee) {
             $currentUser = Auth::user();
 
             // Skip supervisor display for Semi and Beatriz
