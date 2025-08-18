@@ -2313,10 +2313,11 @@ class StaffController extends Controller
      */
     public function getStaffWorkingPeriodsForDaily($staffId, $date)
     {
-        // Get staff working hours from StaffMonthlyHours
+        // Get staff working hours from StaffMonthlyHours - ONLY APPROVED HOURS
         $staffHours = StaffMonthlyHours::where('staff_id', $staffId)
             ->whereYear('date', $date->year)
             ->whereMonth('date', $date->month)
+            ->where('is_approved', 1) // Only show approved hours
             ->get();
         
         $periods = [];
