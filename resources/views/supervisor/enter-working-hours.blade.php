@@ -2118,9 +2118,27 @@
                                 
                                 // Remove unapproved styling from this employee's cell
                                 const cell = button.closest('td');
-                                cell.querySelectorAll('.unapproved-hours, .unapproved-entry, .unapproved-container, .unapproved-input').forEach(el => {
-                                    el.classList.remove('unapproved-hours', 'unapproved-entry', 'unapproved-container', 'unapproved-input');
-                                });
+                                if (cell) {
+                                    // Remove classes from all elements with unapproved styling
+                                    cell.querySelectorAll('.unapproved-hours, .unapproved-entry, .unapproved-container, .unapproved-input').forEach(el => {
+                                        el.classList.remove('unapproved-hours', 'unapproved-entry', 'unapproved-container', 'unapproved-input');
+                                    });
+                                    
+                                    // Also remove from direct elements that might have these classes
+                                    if (cell.classList.contains('unapproved-hours')) cell.classList.remove('unapproved-hours');
+                                    if (cell.classList.contains('unapproved-entry')) cell.classList.remove('unapproved-entry');
+                                    if (cell.classList.contains('unapproved-container')) cell.classList.remove('unapproved-container');
+                                    if (cell.classList.contains('unapproved-input')) cell.classList.remove('unapproved-input');
+                                    
+                                    // Update data attributes to reflect approved status
+                                    cell.querySelectorAll('[data-approved]').forEach(el => {
+                                        el.setAttribute('data-approved', '1');
+                                    });
+                                    
+                                    console.log('Successfully updated cell styling for staff ID:', staffId, 'date:', date);
+                                } else {
+                                    console.error('Could not find cell element for styling update');
+                                }
                             } else {
                                 // Error notification
                                 Swal.fire({
