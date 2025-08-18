@@ -1,16 +1,6 @@
 @php
     // Check if current user should be restricted from editing this staff member's hours
-    $currentUserEmail                        @if(!$isOwnRoster && $isApproved !== 1)
-                <div class="col-auto">
-                    <label class="form-label small" style="color: #a8b5c8;">&nbsp;</label>
-                    <div>
-                        <button type="button" class="btn btn-outline-danger btn-sm" 
-                                onclick="removeTimeEntry(this)">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            @endifer()->email ?? '';
+    $currentUserEmail = Auth::user()->email ?? '';
     $isRestrictedUser = in_array($currentUserEmail, ['beatriz@nordictravels.eu', 'semi@nordictravels.eu']);
     $isOwnRoster = $isRestrictedUser && $currentUserEmail === $staff->email;
     
@@ -125,7 +115,7 @@
                        onchange="updateTimeRange(this)"
                        @if($isApproved === 1) style="cursor: not-allowed; pointer-events: none;" @endif>
             </div>
-            @if(!$isOwnRoster)
+            @if(!$isOwnRoster && $isApproved !== 1)
                 <div class="col-auto">
                     <label class="form-label small" style="color: #a8b5c8;">&nbsp;</label>
                     <div>
