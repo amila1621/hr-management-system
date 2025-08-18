@@ -1020,6 +1020,9 @@ class SupervisorController extends Controller
                 foreach ($staffDailyHours as $date => $timeRanges) {
                     $currentDate = Carbon::parse($date);
                     if ($currentDate->between($weekStart, $weekEnd)) {
+                        // Note: Allow new entries even when approved records exist for the same staff/date
+                        // Frontend UI prevents modification of existing approved records
+
                         $formattedHours = [];
 
                         foreach ($timeRanges as $timeRange) {
@@ -1108,17 +1111,9 @@ class SupervisorController extends Controller
                             // Check if this is for HR assistant or team lead
                             if (Auth::user()->role === 'hr-assistant' || Auth::user()->role === 'team-lead') {
                                 if ($existingRecord) {
-                                    // Check if the hours data has actually changed
-                                    $existingHours = $existingRecord->hours_data;
-                                    $hasChanged = json_encode($existingHours) !== json_encode($formattedHours);
-                                    
-                                    if ($hasChanged) {
-                                        // Data has changed, mark as pending approval
-                                        $isApproved = 0;
-                                    } else {
-                                        // Data hasn't changed, keep existing approval status
-                                        $isApproved = $existingRecord->is_approved;
-                                    }
+                                    // FIXED: Always preserve existing approval status for existing records
+                                    // The UI prevents modification of approved records anyway
+                                    $isApproved = $existingRecord->is_approved;
                                 } else {
                                     // New record, mark as pending approval
                                     $isApproved = 0;
@@ -1132,17 +1127,9 @@ class SupervisorController extends Controller
                                 if ($currentStaffUser && $currentStaffUser->id == $staffId) {
                                     // Staff member is reporting their own hours
                                     if ($existingRecord) {
-                                        // Check if the hours data has actually changed
-                                        $existingHours = $existingRecord->hours_data;
-                                        $hasChanged = json_encode($existingHours) !== json_encode($formattedHours);
-                                        
-                                        if ($hasChanged) {
-                                            // Data has changed, mark as pending approval
-                                            $isApproved = 0;
-                                        } else {
-                                            // Data hasn't changed, keep existing approval status
-                                            $isApproved = $existingRecord->is_approved;
-                                        }
+                                        // FIXED: Always preserve existing approval status for existing records
+                                        // The UI prevents modification of approved records anyway
+                                        $isApproved = $existingRecord->is_approved;
                                     } else {
                                         // New record, mark as pending approval
                                         $isApproved = 0;
@@ -1320,6 +1307,9 @@ class SupervisorController extends Controller
                 foreach ($staffDailyHours as $date => $timeRanges) {
                     $currentDate = Carbon::parse($date);
                     if ($currentDate->between($weekStart, $weekEnd)) {
+                        // Note: Allow new entries even when approved records exist for the same staff/date
+                        // Frontend UI prevents modification of existing approved records
+
                         $formattedHours = [];
 
                         foreach ($timeRanges as $timeRange) {
@@ -1389,17 +1379,9 @@ class SupervisorController extends Controller
                             // Check if this is for HR assistant or team lead
                             if (Auth::user()->role === 'hr-assistant' || Auth::user()->role === 'team-lead') {
                                 if ($existingRecord) {
-                                    // Check if the hours data has actually changed
-                                    $existingHours = $existingRecord->hours_data;
-                                    $hasChanged = json_encode($existingHours) !== json_encode($formattedHours);
-                                    
-                                    if ($hasChanged) {
-                                        // Data has changed, mark as pending approval
-                                        $isApproved = 0;
-                                    } else {
-                                        // Data hasn't changed, keep existing approval status
-                                        $isApproved = $existingRecord->is_approved;
-                                    }
+                                    // FIXED: Always preserve existing approval status for existing records
+                                    // The UI prevents modification of approved records anyway
+                                    $isApproved = $existingRecord->is_approved;
                                 } else {
                                     // New record, mark as pending approval
                                     $isApproved = 0;
@@ -1413,17 +1395,9 @@ class SupervisorController extends Controller
                                 if ($currentStaffUser && $currentStaffUser->id == $staffId) {
                                     // Staff member is reporting their own hours
                                     if ($existingRecord) {
-                                        // Check if the hours data has actually changed
-                                        $existingHours = $existingRecord->hours_data;
-                                        $hasChanged = json_encode($existingHours) !== json_encode($formattedHours);
-                                        
-                                        if ($hasChanged) {
-                                            // Data has changed, mark as pending approval
-                                            $isApproved = 0;
-                                        } else {
-                                            // Data hasn't changed, keep existing approval status
-                                            $isApproved = $existingRecord->is_approved;
-                                        }
+                                        // FIXED: Always preserve existing approval status for existing records
+                                        // The UI prevents modification of approved records anyway
+                                        $isApproved = $existingRecord->is_approved;
                                     } else {
                                         // New record, mark as pending approval
                                         $isApproved = 0;
@@ -1594,6 +1568,76 @@ class SupervisorController extends Controller
         }
 
         return $formattedEntry;
+    }
+
+    /**
+     * Approve pending record for a specific employee on a specific date
+     */
+    public function approveEmployee(Request $request)
+    {
+        try {
+            $date = $request->input('date');
+            $staffId = $request->input('staff_id');
+
+            // Validate input
+            if (!$date || !$staffId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Missing date or staff ID parameter.'
+                ], 400);
+            }
+
+            // Get the staff member
+            $staff = StaffUser::find($staffId);
+            if (!$staff) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Staff member not found.'
+                ], 404);
+            }
+
+            DB::beginTransaction();
+
+            // Find pending records for this staff member on this date
+            $staffHours = StaffMonthlyHours::where('staff_id', $staffId)
+                ->where('date', $date)
+                ->where('is_approved', 0) // Only pending records
+                ->first();
+
+            if ($staffHours) {
+                // Approve the record - IMPORTANT: Preserve all existing data including notes
+                $staffHours->is_approved = 1;
+                // DO NOT modify hours_data - keep all existing data including notes
+                $staffHours->save();
+                
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Successfully approved hours for {$staff->name} on " . Carbon::parse($date)->format('M j, Y')
+                ]);
+            } else {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No pending records found for this employee on the selected date.'
+                ], 404);
+            }
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Employee approval failed', [
+                'error' => $e->getMessage(),
+                'date' => $request->input('date'),
+                'staff_id' => $request->input('staff_id'),
+                'user_id' => Auth::user()->id
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while approving the record. Please try again.'
+            ], 500);
+        }
     }
 
     public function displaySchedule()

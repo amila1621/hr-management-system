@@ -76,6 +76,43 @@
         border: 1px solid #ffc107;
     }
 
+    /* Approved records styling */
+    .approved-container {
+        background-color: rgba(40, 167, 69, 0.1);
+        border: 1px solid #28a745;
+        border-radius: 4px;
+        padding: 3px;
+        position: relative;
+    }
+
+    .approved-input {
+        background-color: rgba(40, 167, 69, 0.05) !important;
+        border-color: #28a745 !important;
+        cursor: not-allowed;
+    }
+
+    .approved-badge {
+        position: absolute;
+        top: -8px;
+        right: -5px;
+        background: #28a745;
+        color: white;
+        font-size: 0.6rem;
+        font-weight: bold;
+        padding: 1px 4px;
+        border-radius: 3px;
+        z-index: 5;
+        border: 1px solid #1e7e34;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Hover effect for approved containers */
+    .approved-container:hover {
+        background-color: rgba(40, 167, 69, 0.15);
+        border-color: #1e7e34;
+        transition: all 0.2s ease;
+    }
+
     /* Mobile responsive */
     @media (max-width: 768px) {
         .unapproved-container::before {
@@ -226,7 +263,8 @@
                                                                 @php
                                                                 $dateString = $date->format('Y-m-d');
                                                                 $hoursData = $staffHours[$staff->id][$dateString]['hours_data'] ?? [];
-                                                                $isApproved = $staffHours[$staff->id][$dateString]['is_approved'] ?? 1; // Get approval status
+                                                                // Only set approval status if record exists, otherwise null for empty slots
+                                                                $isApproved = isset($staffHours[$staff->id][$dateString]) ? $staffHours[$staff->id][$dateString]['is_approved'] : null;
                                                                 $staffDateKey = $staff->id . '_' . $dateString;
                                                                 $sickLeaveInfo = $sickLeaveStatuses[$staffDateKey] ?? null;
                                                                 @endphp
@@ -368,7 +406,7 @@
                                                                                 @endif
                                                                                 
                                                                                     @if(!$isSpecialType)
-                                                                                        @if($isApproved == 0)
+                                                                                        @if($isApproved === 0)
                                                                                             <div class="unapproved-container">
                                                                                                 <div class="basic-time-row">
                                                                                                     <input type="time" 
@@ -384,7 +422,26 @@
                                                                                                         {{ $isSpecialType || $isOwnRoster ? 'disabled' : '' }}>
                                                                                                 </div>
                                                                                             </div>
+                                                                                        @elseif($isApproved === 1)
+                                                                                            <div class="basic-time-row approved-container">
+                                                                                                <input type="time" 
+                                                                                                    class="form-control form-control-sm time-start approved-input"
+                                                                                                    value="{{ $displayStartTime }}"
+                                                                                                    disabled
+                                                                                                    title="This record has been approved and cannot be modified">
+                                                                                                
+                                                                                                <span class="time-separator mx-1">-</span>
+                                                                                                
+                                                                                                <input type="time" 
+                                                                                                    class="form-control form-control-sm time-end approved-input"
+                                                                                                    value="{{ $displayEndTime }}"
+                                                                                                    disabled
+                                                                                                    title="This record has been approved and cannot be modified">
+                                                                                                
+                                                                                                <span class="approved-badge">✓ APPROVED</span>
+                                                                                            </div>
                                                                                         @else
+                                                                                            <!-- This is for empty slots (isApproved is null) -->
                                                                                             <div class="basic-time-row">
                                                                                                 <input type="time" 
                                                                                                     class="form-control form-control-sm time-start"
@@ -444,13 +501,14 @@
                                                                                 @endif
 
                                                                                 <div class="dropdown d-inline-block">
-                                                                                    <button class="btn btn-sm btn-secondary dropdown-toggle {{ $isOwnRoster ? 'disabled' : '' }}" 
+                                                                                    <button class="btn btn-sm btn-secondary dropdown-toggle {{ $isOwnRoster || $isApproved === 1 ? 'disabled' : '' }}" 
                                                                                             type="button" 
                                                                                             data-toggle="dropdown"
-                                                                                            {{ $isOwnRoster ? 'disabled' : '' }}>
+                                                                                            {{ $isOwnRoster || $isApproved === 1 ? 'disabled' : '' }}
+                                                                                            {{ $isApproved === 1 ? 'title=This record has been approved and cannot be modified' : '' }}>
                                                                                         <i class="fas fa-ellipsis-h"></i>
                                                                                     </button>
-                                                                                    @if(!$isOwnRoster)
+                                                                                    @if(!$isOwnRoster && $isApproved !== 1)
                                                                                     <div class="dropdown-menu">
                                                                                         <button type="button" class="dropdown-item quick-fill" data-value="V">Day Off (V)</button>
                                                                                         <button type="button" class="dropdown-item quick-fill" data-value="X">Day Off (X)</button>
@@ -493,10 +551,11 @@
                                                                             @if(!$isOwnRoster && !$isSpecialType)
                                                                             <div class="notes-container mt-2 mb-2">
                                                                                 <small class="text-muted d-block mb-1" style="font-size: 10px;">Notes:</small>
-                                                                                <textarea class="form-control form-control-sm notes-input" 
+                                                                                <textarea class="form-control form-control-sm notes-input {{ $isApproved === 1 ? 'approved-input' : '' }}" 
                                                                                          rows="2" 
-                                                                                         placeholder="Add notes for this time entry..."
-                                                                                         style="font-size: 11px; resize: vertical; min-height: 35px; width: 100%;">{{ isset($timeRange['notes']) ? $timeRange['notes'] : '' }}</textarea>
+                                                                                         placeholder="{{ $isApproved === 1 && empty($timeRange['notes'] ?? '') ? 'Notes (Read-only - Record approved)' : 'Add notes for this time entry...' }}"
+                                                                                         {{ $isApproved === 1 ? 'disabled readonly title="This record has been approved and cannot be modified"' : '' }}
+                                                                                         style="font-size: 11px; resize: vertical; min-height: 35px; width: 100%;">{{ $timeRange['notes'] ?? '' }}</textarea>
                                                                             </div>
                                                                             @endif
                                                                         </div>
@@ -1531,6 +1590,18 @@ function applyQuickFill(container, value) {
         if (e.target.classList.contains('remove-time-slot') || e.target.closest('.remove-time-slot')) {
             e.preventDefault();
             const container = e.target.closest('.time-input-container');
+            
+            // CRITICAL: Check if this is an approved record
+            if (container.querySelector('.approved-container')) {
+                Swal.fire({
+                    title: 'Cannot Remove Approved Record',
+                    text: 'This record has been approved and cannot be removed. Only administrators and supervisors can modify approved records.',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+                return; // Exit early - don't allow removal
+            }
+            
             removeTimeSlot(container);
         }
 
@@ -1604,6 +1675,10 @@ function applyQuickFill(container, value) {
     document.querySelectorAll('.department-form').forEach(form => {
     form.addEventListener('submit', async function(e) {
         e.preventDefault(); // Prevent default submission
+        
+        // Note: Approved records are disabled in the UI, so users cannot modify them
+        // Backend validation will catch any programmatic attempts to modify approved records
+        // This allows users to add new entries to empty slots even when approved records exist
         
         // Get the department from the hidden input
         const departmentInput = form.querySelector('input[name="department"]');
@@ -1985,6 +2060,18 @@ document.addEventListener('click', function(e) {
     if (e.target.classList.contains('quick-fill')) {
         e.preventDefault();
         const container = e.target.closest('.time-input-container');
+        
+        // CRITICAL: Check if this is an approved record
+        if (container.querySelector('.approved-container')) {
+            Swal.fire({
+                title: 'Cannot Modify Approved Record',
+                text: 'This record has been approved and cannot be modified. Only administrators and supervisors can modify approved records.',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+            return; // Exit early - don't allow modification
+        }
+        
         const value = e.target.dataset.value;
         applyQuickFill(container, value);
         return; // Exit early
@@ -1995,6 +2082,18 @@ document.addEventListener('click', function(e) {
     if (e.target.classList.contains('remove-time-slot') || e.target.closest('.remove-time-slot')) {
         e.preventDefault();
         const container = e.target.closest('.time-input-container');
+        
+        // CRITICAL: Check if this is an approved record
+        if (container.querySelector('.approved-container')) {
+            Swal.fire({
+                title: 'Cannot Remove Approved Record',
+                text: 'This record has been approved and cannot be removed. Only administrators and supervisors can modify approved records.',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+            return; // Exit early - don't allow removal
+        }
+        
         removeTimeSlot(container);
         return; // Exit early
     }

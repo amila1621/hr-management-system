@@ -253,6 +253,7 @@ Route::middleware(['auth','activity'])->group(function () {
     })->name('guide-supervisor.enter-working-hours');
     Route::post('/supervisor/enter-working-hours', [SupervisorController::class, 'storeWorkingHours'])->name('supervisor.working-hours.store');
     Route::post('/staff/enter-working-hours', [SupervisorController::class, 'staffStoreWorkingHours'])->name('staff.working-hours.store');
+    Route::post('/supervisor/approve-employee', [SupervisorController::class, 'approveEmployee'])->name('supervisor.approve-employee');
     Route::get('/am-supervisor/enter-working-hours', [SupervisorController::class, 'amEnterWorkingHours'])->name('am-supervisor.enter-working-hours');
     Route::get('/supervisor/print-roster', [SupervisorController::class, 'printRoster'])->name('supervisor.print-roster');
 
