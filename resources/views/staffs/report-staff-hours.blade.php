@@ -88,7 +88,20 @@
     .approved-input {
         background-color: rgba(40, 167, 69, 0.05) !important;
         border-color: #28a745 !important;
-        cursor: not-allowed;
+        cursor: not-allowed !important;
+        pointer-events: none !important; /* Completely disable mouse interactions */
+        user-select: none !important; /* Prevent text selection */
+    }
+    
+    /* Ensure approved containers also show not-allowed cursor */
+    .approved-container {
+        cursor: not-allowed !important;
+    }
+    
+    /* Style for approved inputs when they try to be focused */
+    .approved-input:focus {
+        outline: none !important;
+        box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.3) !important;
     }
 
     .approved-badge {
@@ -876,6 +889,23 @@ function initFlatpickrForContainer(container) {
 
     // Skip if already initialized with Flatpickr
     if (startInput.classList.contains('flatpickr-initialized')) return;
+
+    // CRITICAL FIX: Check if this is an approved record - do NOT initialize Flatpickr for approved records
+    const approvedContainer = container.closest('.approved-container');
+    const isApproved = startInput.classList.contains('approved-input') || 
+                       endInput.classList.contains('approved-input') || 
+                       approvedContainer !== null;
+    
+    if (isApproved) {
+        // For approved records, ensure inputs stay disabled and return early
+        startInput.disabled = true;
+        endInput.disabled = true;
+        startInput.style.cursor = 'not-allowed';
+        endInput.style.cursor = 'not-allowed';
+        startInput.title = 'This record has been approved and cannot be modified';
+        endInput.title = 'This record has been approved and cannot be modified';
+        return; // Don't initialize Flatpickr for approved records
+    }
 
     // CRITICAL FIX: Check if we're in the middle of converting to regular hours
     const isConvertingToRegular = container.classList.contains('converting-to-regular');
@@ -1885,6 +1915,37 @@ function applyQuickFill(container, value) {
             }
         }
     });
+
+    // Add click prevention for approved inputs - CRITICAL FIX
+    document.addEventListener('click', function(e) {
+        // Check if the clicked element is an approved time input
+        if (e.target.matches('.approved-input') || e.target.closest('.approved-container')) {
+            // Prevent the click from triggering Flatpickr or any other interaction
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            // Show a user-friendly message
+            Swal.fire({
+                title: 'Record Approved',
+                text: 'This record has been approved and cannot be modified. Contact your supervisor or administrator for changes.',
+                icon: 'info',
+                confirmButtonText: 'OK',
+                timer: 3000,
+                timerProgressBar: true
+            });
+            
+            return false;
+        }
+    }, true); // Use capture phase to catch the event early
+    
+    // Also prevent focus events on approved inputs
+    document.addEventListener('focus', function(e) {
+        if (e.target.matches('.approved-input')) {
+            e.target.blur(); // Remove focus
+            e.preventDefault();
+        }
+    }, true);
 
     // Initialize all time inputs with Flatpickr
     initializeAllTimeInputs();

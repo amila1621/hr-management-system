@@ -159,7 +159,7 @@
                             @endif
                             
                             @forelse($hoursData as $index => $timeRange)
-                                <div class="time-entry mb-3 {{ $isApproved == 0 ? 'unapproved' : '' }}">
+                                <div class="time-entry mb-3 {{ $isApproved == 0 ? 'unapproved' : '' }} {{ $isApproved === 1 ? 'approved' : '' }}">
                                     @include('staffs.mobile.partials.time-entry', [
                                         'timeRange' => $timeRange,
                                         'index' => $index,
@@ -377,6 +377,40 @@
     padding: 2px 6px;
     border-radius: 4px;
     z-index: 5;
+}
+
+/* Approved entries styling for mobile */
+.approved-input {
+    background-color: rgba(40, 167, 69, 0.1) !important;
+    border-color: #28a745 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+    user-select: none !important;
+    color: #28a745 !important;
+}
+
+.approved-input:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.3) !important;
+}
+
+/* Approved time entry container */
+.time-entry.approved {
+    background-color: rgba(40, 167, 69, 0.1);
+    border: 1px solid #28a745;
+    position: relative;
+}
+
+/* Prevent touch/click interactions on approved form controls */
+.form-control-mobile.approved-input {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    pointer-events: none !important;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .staff-card {

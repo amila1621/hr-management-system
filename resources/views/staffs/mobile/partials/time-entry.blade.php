@@ -1,6 +1,16 @@
 @php
     // Check if current user should be restricted from editing this staff member's hours
-    $currentUserEmail = Auth::user()->email ?? '';
+    $currentUserEmail                        @if(!$isOwnRoster && $isApproved !== 1)
+                <div class="col-auto">
+                    <label class="form-label small" style="color: #a8b5c8;">&nbsp;</label>
+                    <div>
+                        <button type="button" class="btn btn-outline-danger btn-sm" 
+                                onclick="removeTimeEntry(this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            @endifer()->email ?? '';
     $isRestrictedUser = in_array($currentUserEmail, ['beatriz@nordictravels.eu', 'semi@nordictravels.eu']);
     $isOwnRoster = $isRestrictedUser && $currentUserEmail === $staff->email;
     
@@ -94,10 +104,12 @@
                 <!-- Start Time -->
                 <label class="form-label small text-muted" style="color: #a8b5c8;">Start Time</label>
                 <input type="time" 
-                       class="form-control form-control-mobile time-start"
+                       class="form-control form-control-mobile time-start {{ $isApproved === 1 ? 'approved-input' : '' }}"
                        value="{{ $displayStartTime }}"
-                       {{ $isOwnRoster ? 'disabled' : '' }}
-                       onchange="updateTimeRange(this)">
+                       {{ ($isOwnRoster || $isApproved === 1) ? 'disabled' : '' }}
+                       {{ $isApproved === 1 ? 'title="This record has been approved and cannot be modified"' : '' }}
+                       onchange="updateTimeRange(this)"
+                       @if($isApproved === 1) style="cursor: not-allowed; pointer-events: none;" @endif>
             </div>
             <div class="col-auto px-2 mt-4">
                 <i class="fas fa-arrow-right text-muted" style="color: #a8b5c8;"></i>
@@ -106,10 +118,12 @@
                 <!-- End Time -->
                 <label class="form-label small text-muted" style="color: #a8b5c8;">End Time</label>
                 <input type="time" 
-                       class="form-control form-control-mobile time-end"
+                       class="form-control form-control-mobile time-end {{ $isApproved === 1 ? 'approved-input' : '' }}"
                        value="{{ $displayEndTime }}"
-                       {{ $isOwnRoster ? 'disabled' : '' }}
-                       onchange="updateTimeRange(this)">
+                       {{ ($isOwnRoster || $isApproved === 1) ? 'disabled' : '' }}
+                       {{ $isApproved === 1 ? 'title="This record has been approved and cannot be modified"' : '' }}
+                       onchange="updateTimeRange(this)"
+                       @if($isApproved === 1) style="cursor: not-allowed; pointer-events: none;" @endif>
             </div>
             @if(!$isOwnRoster)
                 <div class="col-auto">
@@ -141,7 +155,14 @@
         @endif
     @endif
     
-    @if(!$isOwnRoster && !$isSpecialType)
+    @if($isApproved === 1)
+        <!-- Approved Record Indicator -->
+        <div class="mt-2 text-center">
+            <span class="badge bg-success">
+                <i class="fas fa-check-circle me-1"></i>APPROVED - Cannot be modified
+            </span>
+        </div>
+    @elseif(!$isOwnRoster && !$isSpecialType)
         <!-- Quick Action Buttons -->
         @php
             // Check current user's department for department-specific buttons
@@ -215,6 +236,12 @@
 <script>
 // Update time range when time inputs change
 function updateTimeRange(input) {
+    // CRITICAL FIX: Check if this is an approved record
+    if (input.classList.contains('approved-input') || input.disabled) {
+        MobileApp.showError('This record has been approved and cannot be modified');
+        return;
+    }
+    
     const container = input.closest('.time-picker-group');
     const startInput = container.querySelector('.time-start');
     const endInput = container.querySelector('.time-end');
@@ -284,6 +311,13 @@ function applyQuickFill(button, value) {
     if (!container) {
         console.error('❌ Time picker group container not found');
         MobileApp.showError('Container not found');
+        return;
+    }
+    
+    // CRITICAL FIX: Check if this is an approved record
+    const approvedInputs = container.querySelectorAll('.approved-input');
+    if (approvedInputs.length > 0) {
+        MobileApp.showError('This record has been approved and cannot be modified');
         return;
     }
     
@@ -490,6 +524,14 @@ function removeTimeEntry(button) {
     console.log('🗑️ removeTimeEntry called');
     
     const container = button.closest('.time-picker-group');
+    
+    // CRITICAL FIX: Check if this is an approved record
+    const approvedInputs = container.querySelectorAll('.approved-input');
+    if (approvedInputs.length > 0) {
+        MobileApp.showError('This record has been approved and cannot be modified');
+        return;
+    }
+    
     const dayContent = container.closest('.day-content');
     
     // Check if this time entry is inside a wrapper (newly added entries)
