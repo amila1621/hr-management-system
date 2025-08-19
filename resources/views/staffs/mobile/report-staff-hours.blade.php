@@ -1097,9 +1097,6 @@ function showNextStaff() {
             console.log('📊 Post-navigation state:');
             debugNavigationState();
         }, 100);
-    } else {
-        console.log('❌ Already at last staff member');
-        MobileApp.showError('Already at the last staff member');
     }
 }
 
