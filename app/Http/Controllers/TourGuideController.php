@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\SickLeave;
 use App\Models\Departments;
 use App\Models\Announcements;
+use App\Models\ExtraHoursRequest;
 
 class TourGuideController extends Controller
 {
@@ -524,5 +525,193 @@ class TourGuideController extends Controller
         }
 
         return response()->json(['message' => 'Hours updated successfully']);
+    }
+
+    public function extraHoursRequest()
+    {
+        return view('guides.extra-hours-request-new');
+    }
+
+    public function getToursByDateAjax(Request $request)
+    {
+        try {
+            $userId = Auth::id();
+            
+            if (!$userId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not authenticated'
+                ], 401);
+            }
+            
+            $tourGuide = TourGuide::where('user_id', $userId)->first();
+            
+            if (!$tourGuide) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tour guide profile not found'
+                ], 404);
+            }
+            
+            $date = $request->get('date', date('Y-m-d'));
+            $tours = $this->getToursByDate($tourGuide->id, $date);
+            
+            return response()->json([
+                'success' => true,
+                'tours' => $tours,
+                'date' => $date,
+                'guide_id' => $tourGuide->id,
+                'message' => count($tours) ? '' : 'No tours found for the selected date.'
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('getToursByDateAjax error: ' . $e->getMessage() . ' - ' . $e->getFile() . ':' . $e->getLine());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+                'debug' => [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
+            ], 500);
+        }
+    }
+
+    private function getToursByDate($guideId, $date)
+    {
+        try {
+            $selectedDate = Carbon::parse($date);
+            $startOfDay = $selectedDate->copy()->startOfDay();
+            $endOfDay = $selectedDate->copy()->endOfDay();
+
+            $eventSalaries = EventSalary::where('guideId', $guideId)
+                ->whereHas('event', function ($query) use ($startOfDay, $endOfDay) {
+                    $query->whereBetween('start_time', [$startOfDay, $endOfDay]);
+                })
+                ->with('event')
+                ->get()
+                ->map(function($salary) use ($guideId) {
+                    try {
+                        $existingRequest = ExtraHoursRequest::where('guide_id', $guideId)
+                            ->where('event_id', $salary->event->id)
+                            ->whereIn('status', ['pending', 'approved'])
+                            ->exists();
+
+                        // Get start and end times with fallbacks
+                        $startTime = $salary->guide_start_time ?? $salary->event->start_time;
+                        $endTime = $salary->guide_end_time ?? $salary->event->end_time;
+                        
+                        // Skip if essential fields are null
+                        if (!$startTime || !$endTime) {
+                            \Log::warning("Skipping salary ID {$salary->id}: Missing start or end time");
+                            return null;
+                        }
+                        
+                        // Convert to Carbon if they are strings
+                        if (is_string($startTime)) {
+                            $startTime = Carbon::parse($startTime);
+                        }
+                        if (is_string($endTime)) {
+                            $endTime = Carbon::parse($endTime);
+                        }
+
+                        return [
+                            'id' => $salary->id,
+                            'type' => 'event',
+                            'tour_name' => $salary->event->name ?? 'Unknown Tour',
+                            'start_time' => $startTime->format('H:i'),
+                            'end_time' => $endTime->format('H:i'),
+                            'full_end_time' => $endTime->format('Y-m-d\TH:i'),
+                            'formatted_end_time' => $endTime->format('d.m.Y H:i'),
+                            'can_request_extra_hours' => !$existingRequest
+                        ];
+                    } catch (\Exception $e) {
+                        \Log::error("Error processing salary ID {$salary->id}: " . $e->getMessage());
+                        return null;
+                    }
+                })->filter(); // Remove null entries
+
+            $sickLeaves = SickLeave::where('guide_id', $guideId)
+                ->whereDate('date', $selectedDate->format('Y-m-d'))
+                ->get()
+                ->map(function($leave) {
+                    try {
+                        $startTime = Carbon::parse($leave->start_time);
+                        $endTime = Carbon::parse($leave->end_time);
+                        $endDateTime = Carbon::parse($leave->date . ' ' . $leave->end_time);
+                        
+                        return [
+                            'id' => 'sick_' . $leave->id,
+                            'type' => 'sick_leave',
+                            'tour_name' => $leave->tour_name,
+                            'start_time' => $startTime->format('H:i'),
+                            'end_time' => $endTime->format('H:i'),
+                            'full_end_time' => $endDateTime->format('Y-m-d\TH:i'),
+                            'formatted_end_time' => $endDateTime->format('d.m.Y H:i'),
+                            'can_request_extra_hours' => false
+                        ];
+                    } catch (\Exception $e) {
+                        \Log::error('Error parsing sick leave times: ' . $e->getMessage());
+                        return null; // This will be filtered out
+                    }
+                })->filter(); // Remove null entries
+
+            return $eventSalaries->concat($sickLeaves)->sortBy('start_time')->values()->all();
+        } catch (\Exception $e) {
+            \Log::error('Error in getToursByDate: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    public function extraHoursRequestSubmit(Request $request)
+    {
+        $request->validate([
+            'tour_id' => 'required',
+            'explanation' => 'required|string|max:1000',
+            'actual_end_time' => 'required|date',
+            'extra_hours_minutes' => 'required|integer|min:1'
+        ]);
+
+        $userId = Auth::id();
+        $tourGuide = TourGuide::where('user_id', $userId)->firstOrFail();
+
+        if (str_starts_with($request->tour_id, 'sick_')) {
+            return redirect()->back()->with('error', 'Cannot request extra hours for sick leave entries.');
+        }
+
+        $eventSalary = EventSalary::findOrFail($request->tour_id);
+        
+        if ($eventSalary->guideId != $tourGuide->id) {
+            return redirect()->back()->with('error', 'You can only request extra hours for your own tours.');
+        }
+
+        $originalEndTime = $eventSalary->guide_end_time ?? $eventSalary->event->end_time;
+        $requestedEndTime = Carbon::parse($request->actual_end_time);
+
+        if ($requestedEndTime <= $originalEndTime) {
+            return redirect()->back()->with('error', 'Requested end time must be after the original end time.');
+        }
+
+        $existingRequest = ExtraHoursRequest::where('guide_id', $tourGuide->id)
+            ->where('event_id', $eventSalary->event->id)
+            ->whereIn('status', ['pending', 'approved'])
+            ->first();
+
+        if ($existingRequest) {
+            return redirect()->back()->with('error', 'You already have a pending or approved request for this tour.');
+        }
+
+        ExtraHoursRequest::create([
+            'guide_id' => $tourGuide->id,
+            'event_id' => $eventSalary->event->id,
+            'explanation' => $request->explanation,
+            'requested_end_time' => $requestedEndTime,
+            'original_end_time' => $originalEndTime,
+            'extra_hours_minutes' => $request->extra_hours_minutes,
+            'status' => 'pending'
+        ]);
+
+        return redirect()->back()->with('success', 'Extra Hours Request submitted, please await admin approval, thank you');
     }
 }
