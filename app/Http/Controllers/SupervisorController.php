@@ -496,7 +496,13 @@ class SupervisorController extends Controller
         // Add this line to create a flattened collection for the dropdown:
         $allStaffFlattened = collect($staffByDepartment)->flatten();
 
-        return view('supervisor.enter-working-hours', compact(
+        // Check if mobile device or force mobile view
+        $isMobile = session('is_mobile', false) || $request->has('mobile');
+        
+        // Choose view based on device type
+        $viewName = $isMobile ? 'staffs.mobile.report-staff-hours' : 'supervisor.enter-working-hours';
+
+        return view($viewName, compact(
             'selectedDate',
             'dates',
             'staffByDepartment',
@@ -1014,6 +1020,9 @@ class SupervisorController extends Controller
                 foreach ($staffDailyHours as $date => $timeRanges) {
                     $currentDate = Carbon::parse($date);
                     if ($currentDate->between($weekStart, $weekEnd)) {
+                        // Note: Allow new entries even when approved records exist for the same staff/date
+                        // Frontend UI prevents modification of existing approved records
+
                         $formattedHours = [];
 
                         foreach ($timeRanges as $timeRange) {
@@ -1057,16 +1066,28 @@ class SupervisorController extends Controller
                                                 $formattedEntry['original_end_time'] = $timeData['original_end_time'];
                                             }
 
+                                            // FIXED: Preserve notes for special type entries
+                                            if (isset($timeData['notes']) && !empty($timeData['notes'])) {
+                                                $formattedEntry['notes'] = $timeData['notes'];
+                                            }
+
                                             $formattedHours[] = $formattedEntry;
                                         } else {
                                             // For other JSON entries (normal time updates), include original times as before
-                                            $formattedHours[] = [
+                                            $formattedEntry = [
                                                 'start_time' => $timeData['start_time'],
                                                 'end_time' => $timeData['end_time'],
                                                 'type' => $isSickLeave ? 'SL' : ($timeData['type'] ?? 'normal'),
                                                 'original_start_time' => $timeData['original_start_time'] ?? $timeData['start_time'],
                                                 'original_end_time' => $timeData['original_end_time'] ?? $timeData['end_time']
                                             ];
+                                            
+                                            // FIXED: Preserve notes for regular time entries
+                                            if (isset($timeData['notes']) && !empty($timeData['notes'])) {
+                                                $formattedEntry['notes'] = $timeData['notes'];
+                                            }
+                                            
+                                            $formattedHours[] = $formattedEntry;
                                         }
                                         continue;
                                     }
@@ -1096,23 +1117,44 @@ class SupervisorController extends Controller
                                 ->where('date', $date)
                                 ->first();
 
+                            // CRITICAL FIX: Preserve existing notes when new data doesn't include them
+                            if ($existingRecord && !empty($existingRecord->hours_data)) {
+                                $existingHoursData = $existingRecord->hours_data;
+                                
+                                // Merge notes from existing data into new data where missing
+                                foreach ($formattedHours as $index => &$newEntry) {
+                                    if (isset($existingHoursData[$index])) {
+                                        $existingEntry = $existingHoursData[$index];
+                                        
+                                        // If new entry doesn't have notes but existing does, preserve them
+                                        if (!isset($newEntry['notes']) && isset($existingEntry['notes']) && !empty($existingEntry['notes'])) {
+                                            $newEntry['notes'] = $existingEntry['notes'];
+                                        }
+                                    }
+                                }
+                                
+                                // If new data has fewer entries than existing, preserve remaining entries with notes
+                                if (count($existingHoursData) > count($formattedHours)) {
+                                    for ($i = count($formattedHours); $i < count($existingHoursData); $i++) {
+                                        if (isset($existingHoursData[$i]) && isset($existingHoursData[$i]['notes'])) {
+                                            // Only preserve if the entry has meaningful data (not just notes)
+                                            if (isset($existingHoursData[$i]['start_time']) || isset($existingHoursData[$i]['type'])) {
+                                                $formattedHours[] = $existingHoursData[$i];
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
                             // Determine approval status based on user role and data changes
                             $isApproved = 1; // Default for supervisors
 
                             // Check if this is for HR assistant or team lead
                             if (Auth::user()->role === 'hr-assistant' || Auth::user()->role === 'team-lead') {
                                 if ($existingRecord) {
-                                    // Check if the hours data has actually changed
-                                    $existingHours = $existingRecord->hours_data;
-                                    $hasChanged = json_encode($existingHours) !== json_encode($formattedHours);
-                                    
-                                    if ($hasChanged) {
-                                        // Data has changed, mark as pending approval
-                                        $isApproved = 0;
-                                    } else {
-                                        // Data hasn't changed, keep existing approval status
-                                        $isApproved = $existingRecord->is_approved;
-                                    }
+                                    // FIXED: Always preserve existing approval status for existing records
+                                    // The UI prevents modification of approved records anyway
+                                    $isApproved = $existingRecord->is_approved;
                                 } else {
                                     // New record, mark as pending approval
                                     $isApproved = 0;
@@ -1126,17 +1168,9 @@ class SupervisorController extends Controller
                                 if ($currentStaffUser && $currentStaffUser->id == $staffId) {
                                     // Staff member is reporting their own hours
                                     if ($existingRecord) {
-                                        // Check if the hours data has actually changed
-                                        $existingHours = $existingRecord->hours_data;
-                                        $hasChanged = json_encode($existingHours) !== json_encode($formattedHours);
-                                        
-                                        if ($hasChanged) {
-                                            // Data has changed, mark as pending approval
-                                            $isApproved = 0;
-                                        } else {
-                                            // Data hasn't changed, keep existing approval status
-                                            $isApproved = $existingRecord->is_approved;
-                                        }
+                                        // FIXED: Always preserve existing approval status for existing records
+                                        // The UI prevents modification of approved records anyway
+                                        $isApproved = $existingRecord->is_approved;
                                     } else {
                                         // New record, mark as pending approval
                                         $isApproved = 0;
@@ -1314,6 +1348,9 @@ class SupervisorController extends Controller
                 foreach ($staffDailyHours as $date => $timeRanges) {
                     $currentDate = Carbon::parse($date);
                     if ($currentDate->between($weekStart, $weekEnd)) {
+                        // Note: Allow new entries even when approved records exist for the same staff/date
+                        // Frontend UI prevents modification of existing approved records
+
                         $formattedHours = [];
 
                         foreach ($timeRanges as $timeRange) {
@@ -1338,36 +1375,17 @@ class SupervisorController extends Controller
                                     $timeData = json_decode($timeRange, true);
                                     if (json_last_error() === JSON_ERROR_NONE && isset($timeData['start_time']) && isset($timeData['end_time'])) {
 
-                                        // For special type entries (on_call, reception), only include original times if they actually exist in the data
-                                        if (isset($timeData['type']) && in_array($timeData['type'], ['on_call', 'reception'])) {
-                                            $formattedEntry = [
-                                                'start_time' => $timeData['start_time'],
-                                                'end_time' => $timeData['end_time'],
-                                                'type' => $timeData['type']
-                                            ];
-
-                                            // Only add original times if they exist AND are different from current times
-                                            if (
-                                                isset($timeData['original_start_time']) &&
-                                                isset($timeData['original_end_time']) &&
-                                                ($timeData['original_start_time'] !== $timeData['start_time'] ||
-                                                    $timeData['original_end_time'] !== $timeData['end_time'])
-                                            ) {
-                                                $formattedEntry['original_start_time'] = $timeData['original_start_time'];
-                                                $formattedEntry['original_end_time'] = $timeData['original_end_time'];
-                                            }
-
-                                            $formattedHours[] = $formattedEntry;
-                                        } else {
-                                            // For other JSON entries (normal time updates), include original times as before
-                                            $formattedHours[] = [
-                                                'start_time' => $timeData['start_time'],
-                                                'end_time' => $timeData['end_time'],
-                                                'type' => $isSickLeave ? 'SL' : ($timeData['type'] ?? 'normal'),
-                                                'original_start_time' => $timeData['original_start_time'] ?? $timeData['start_time'],
-                                                'original_end_time' => $timeData['original_end_time'] ?? $timeData['end_time']
-                                            ];
+                                        // Debug: Log the received time data
+                                        if (isset($timeData['notes'])) {
+                                            Log::info('Time entry with notes received', [
+                                                'staff_id' => $staffId,
+                                                'date' => $date,
+                                                'time_data' => $timeData
+                                            ]);
                                         }
+
+                                        // Use helper function to process time data with notes
+                                        $formattedHours[] = $this->processTimeDataWithNotes($timeData, $isSickLeave);
                                         continue;
                                     }
                                 } catch (\Exception $e) {
@@ -1402,17 +1420,9 @@ class SupervisorController extends Controller
                             // Check if this is for HR assistant or team lead
                             if (Auth::user()->role === 'hr-assistant' || Auth::user()->role === 'team-lead') {
                                 if ($existingRecord) {
-                                    // Check if the hours data has actually changed
-                                    $existingHours = $existingRecord->hours_data;
-                                    $hasChanged = json_encode($existingHours) !== json_encode($formattedHours);
-                                    
-                                    if ($hasChanged) {
-                                        // Data has changed, mark as pending approval
-                                        $isApproved = 0;
-                                    } else {
-                                        // Data hasn't changed, keep existing approval status
-                                        $isApproved = $existingRecord->is_approved;
-                                    }
+                                    // FIXED: Always preserve existing approval status for existing records
+                                    // The UI prevents modification of approved records anyway
+                                    $isApproved = $existingRecord->is_approved;
                                 } else {
                                     // New record, mark as pending approval
                                     $isApproved = 0;
@@ -1426,17 +1436,9 @@ class SupervisorController extends Controller
                                 if ($currentStaffUser && $currentStaffUser->id == $staffId) {
                                     // Staff member is reporting their own hours
                                     if ($existingRecord) {
-                                        // Check if the hours data has actually changed
-                                        $existingHours = $existingRecord->hours_data;
-                                        $hasChanged = json_encode($existingHours) !== json_encode($formattedHours);
-                                        
-                                        if ($hasChanged) {
-                                            // Data has changed, mark as pending approval
-                                            $isApproved = 0;
-                                        } else {
-                                            // Data hasn't changed, keep existing approval status
-                                            $isApproved = $existingRecord->is_approved;
-                                        }
+                                        // FIXED: Always preserve existing approval status for existing records
+                                        // The UI prevents modification of approved records anyway
+                                        $isApproved = $existingRecord->is_approved;
                                     } else {
                                         // New record, mark as pending approval
                                         $isApproved = 0;
@@ -1565,14 +1567,178 @@ class SupervisorController extends Controller
         }
 
         if (preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]-([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $timeRange)) {
-            list($start, $end) = explode('-', $timeRange);
-            $startTime = Carbon::createFromFormat('H:i', $start);
-            $endTime = Carbon::createFromFormat('H:i', $end);
-
-            return $endTime->gt($startTime);
+            $times = explode('-', $timeRange);
+            return count($times) === 2;
         }
 
         return false;
+    }
+    
+    /**
+     * Process time data and include notes if available
+     */
+    private function processTimeDataWithNotes($timeData, $isSickLeave = false)
+    {
+        $formattedEntry = [
+            'start_time' => $timeData['start_time'],
+            'end_time' => $timeData['end_time'],
+            'type' => $isSickLeave ? 'SL' : ($timeData['type'] ?? 'normal')
+        ];
+
+        // For special types (on_call, reception), only add original times if they exist and are different
+        if (isset($timeData['type']) && in_array($timeData['type'], ['on_call', 'reception'])) {
+            // Only add original times if they exist AND are different from current times
+            if (
+                isset($timeData['original_start_time']) &&
+                isset($timeData['original_end_time']) &&
+                ($timeData['original_start_time'] !== $timeData['start_time'] ||
+                    $timeData['original_end_time'] !== $timeData['end_time'])
+            ) {
+                $formattedEntry['original_start_time'] = $timeData['original_start_time'];
+                $formattedEntry['original_end_time'] = $timeData['original_end_time'];
+            }
+        } else {
+            // For normal entries, add original times if they exist, otherwise use current times
+            $formattedEntry['original_start_time'] = $timeData['original_start_time'] ?? $timeData['start_time'];
+            $formattedEntry['original_end_time'] = $timeData['original_end_time'] ?? $timeData['end_time'];
+        }
+
+        // Add notes if present
+        if (isset($timeData['notes']) && !empty(trim($timeData['notes']))) {
+            $formattedEntry['notes'] = trim($timeData['notes']);
+        }
+
+        return $formattedEntry;
+    }
+
+    /**
+     * Approve pending record for a specific employee on a specific date
+     */
+    public function approveEmployee(Request $request)
+    {
+        try {
+            $date = $request->input('date');
+            $staffId = $request->input('staff_id');
+            $currentData = $request->input('current_data', []);
+            $notesData = $request->input('notes_data', []);
+
+            // Validate input
+            if (!$date || !$staffId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Missing date or staff ID parameter.'
+                ], 400);
+            }
+
+            // Get the staff member
+            $staff = StaffUser::find($staffId);
+            if (!$staff) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Staff member not found.'
+                ], 404);
+            }
+
+            DB::beginTransaction();
+
+            // Find pending records for this staff member on this date
+            $staffHours = StaffMonthlyHours::where('staff_id', $staffId)
+                ->where('date', $date)
+                ->where('is_approved', 0) // Only pending records
+                ->first();
+
+            if ($staffHours) {
+                // FIXED: Update the hours data with any modifications made before approval
+                if (!empty($currentData)) {
+                    $updatedHoursData = [];
+                    
+                    foreach ($currentData as $slotKey => $timeValue) {
+                        if (empty($timeValue)) continue;
+                        
+                        // Handle special values (V, X, H)
+                        if (in_array($timeValue, ['V', 'X', 'H'])) {
+                            $updatedHoursData[] = [
+                                'type' => $timeValue,
+                                'start_time' => null,
+                                'end_time' => null
+                            ];
+                            continue;
+                        }
+                        
+                        // Handle JSON format entries (with notes)
+                        if (substr($timeValue, 0, 1) === '{') {
+                            try {
+                                $timeData = json_decode($timeValue, true);
+                                if (json_last_error() === JSON_ERROR_NONE && isset($timeData['start_time']) && isset($timeData['end_time'])) {
+                                    $updatedHoursData[] = $timeData;
+                                    continue;
+                                }
+                            } catch (\Exception $e) {
+                                Log::error('Failed to parse time range JSON during approval', [
+                                    'timeValue' => $timeValue,
+                                    'error' => $e->getMessage()
+                                ]);
+                            }
+                        }
+                        
+                        // Handle simple time ranges
+                        if (strpos($timeValue, '-') !== false) {
+                            list($start, $end) = explode('-', $timeValue);
+                            $entry = [
+                                'start_time' => trim($start),
+                                'end_time' => trim($end),
+                                'type' => 'normal'
+                            ];
+                            
+                            // Add notes if available for this slot
+                            $slotIndex = str_replace('timeSlot_', '', $slotKey);
+                            $notesKey = "notes_{$slotIndex}";
+                            if (isset($notesData[$notesKey])) {
+                                $entry['notes'] = $notesData[$notesKey];
+                            }
+                            
+                            $updatedHoursData[] = $entry;
+                        }
+                    }
+                    
+                    // Update the hours data with the modified data
+                    if (!empty($updatedHoursData)) {
+                        $staffHours->hours_data = $updatedHoursData;
+                    }
+                }
+                
+                // Approve the record
+                $staffHours->is_approved = 1;
+                $staffHours->save();
+                
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Successfully approved hours for {$staff->name} on " . Carbon::parse($date)->format('M j, Y')
+                ]);
+            } else {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No pending records found for this employee on the selected date.'
+                ], 404);
+            }
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Employee approval failed', [
+                'error' => $e->getMessage(),
+                'date' => $request->input('date'),
+                'staff_id' => $request->input('staff_id'),
+                'user_id' => Auth::user()->id
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while approving the record. Please try again.'
+            ], 500);
+        }
     }
 
     public function displaySchedule()

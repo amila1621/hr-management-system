@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TourGuideController;
 use App\Http\Controllers\SalarySummaryController;
 use App\Http\Controllers\CombinedReportController;
+use App\Http\Controllers\ExtraHoursRequestController;
 use App\Models\TourDuration;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
@@ -221,6 +222,17 @@ Route::middleware(['auth','activity'])->group(function () {
 
     Route::get('guide/report-hours', [TourGuideController::class, 'reportHours'])->name('guide.report-hours');
     Route::post('guide/report-hours', [TourGuideController::class, 'reportHoursStore'])->name('guide.report-hours-store');
+    
+    Route::get('guide/extra-hours-request', [TourGuideController::class, 'extraHoursRequest'])->name('guide.extra-hours-request');
+    Route::get('guide/extra-hours-request/tours', [TourGuideController::class, 'getToursByDateAjax'])->name('guide.extra-hours-request.tours');
+    Route::get('guide/extra-hours-request/test', function() {
+        return response()->json(['success' => true, 'message' => 'Route working']);
+    })->name('guide.extra-hours-request.test');
+    Route::post('guide/extra-hours-request', [TourGuideController::class, 'extraHoursRequestSubmit'])->name('guide.extra-hours-request.submit');
+    
+    Route::get('admin/extra-hours-requests', [ExtraHoursRequestController::class, 'index'])->name('admin.extra-hours-requests');
+    Route::post('admin/extra-hours-requests/{id}/approve', [ExtraHoursRequestController::class, 'approve'])->name('admin.extra-hours-requests.approve');
+    Route::post('admin/extra-hours-requests/{id}/reject', [ExtraHoursRequestController::class, 'reject'])->name('admin.extra-hours-requests.reject');
 
     Route::get('staff/report-hours', [StaffController::class, 'reportStaffHours'])->name('staff.report-hours');
     Route::post('staff/report-hours', [StaffController::class, 'reportStaffHoursStore'])->name('staff.report-hours-store');
@@ -247,9 +259,13 @@ Route::middleware(['auth','activity'])->group(function () {
 
 
     Route::get('/supervisor/enter-working-hours', [SupervisorController::class, 'enterWorkingHours'])->name('supervisor.enter-working-hours');
-    Route::get('/guide-supervisor/enter-working-hours', [SupervisorController::class, 'enterWorkingHoursGuideSupervisor'])->name('guide-supervisor.enter-working-hours');
+    // Redirect old route to consolidated staff report hours route
+    Route::get('/guide-supervisor/enter-working-hours', function() {
+        return redirect()->route('staff.report-hours');
+    })->name('guide-supervisor.enter-working-hours');
     Route::post('/supervisor/enter-working-hours', [SupervisorController::class, 'storeWorkingHours'])->name('supervisor.working-hours.store');
     Route::post('/staff/enter-working-hours', [SupervisorController::class, 'staffStoreWorkingHours'])->name('staff.working-hours.store');
+    Route::post('/supervisor/approve-employee', [SupervisorController::class, 'approveEmployee'])->name('supervisor.approve-employee');
     Route::get('/am-supervisor/enter-working-hours', [SupervisorController::class, 'amEnterWorkingHours'])->name('am-supervisor.enter-working-hours');
     Route::get('/supervisor/print-roster', [SupervisorController::class, 'printRoster'])->name('supervisor.print-roster');
 

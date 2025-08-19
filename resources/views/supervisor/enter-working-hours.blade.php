@@ -477,6 +477,17 @@
                                                                                         </div>
                                                                                         @endif
                                                                                     </div>
+
+                                                                                    <!-- Notes Field -->
+                                                                                    @if(!$isOwnRoster && !$isSpecialType)
+                                                                                    <div class="notes-container mt-2 mb-2">
+                                                                                        <small class="text-muted d-block mb-1" style="font-size: 10px;">Notes:</small>
+                                                                                        <textarea class="form-control form-control-sm notes-input {{ $isApproved == 0 ? 'unapproved-input' : '' }}" 
+                                                                                                 rows="2" 
+                                                                                                 placeholder="Add notes for this time entry..."
+                                                                                                 style="font-size: 11px; resize: vertical; min-height: 35px; width: 100%;">{{ $timeRange['notes'] ?? '' }}</textarea>
+                                                                                    </div>
+                                                                                    @endif
                                                                                 </div>
                                                                                 @empty
                                                                                 <!-- Empty time slot for new entries -->
@@ -554,13 +565,45 @@
                                                                                         </div>
                                                                                         @endif
                                                                                     </div>
+
+                                                                                    <!-- Notes Field for Empty Slot -->
+                                                                                    @if(!$isOwnRoster)
+                                                                                    <div class="notes-container mt-2 mb-2">
+                                                                                        <small class="text-muted d-block mb-1" style="font-size: 10px;">Notes:</small>
+                                                                                        <textarea class="form-control form-control-sm notes-input" 
+                                                                                                 rows="2" 
+                                                                                                 placeholder="Add notes for this time entry..."
+                                                                                                 style="font-size: 11px; resize: vertical; min-height: 35px; width: 100%;"></textarea>
+                                                                                    </div>
+                                                                                    @endif
                                                                                 </div>
                                                                                 @endforelse
                                                                             </div>
+
+                                                                            <!-- Individual Employee Approval Button -->
+                                                                            @if($isApproved == 0)
+                                                                                <div class="approval-section mt-2" style="border-top: 1px solid #dee2e6; padding-top: 8px;">
+                                                                                    <button type="button" 
+                                                                                            class="btn btn-sm btn-success approve-employee-btn"
+                                                                                            data-staff-id="{{ $staff->id }}"
+                                                                                            data-date="{{ $dateString }}"
+                                                                                            data-staff-name="{{ $staff->name }}"
+                                                                                            title="Approve {{ $staff->name }}'s record for {{ $date->format('M j') }}">
+                                                                                        <i class="fas fa-check"></i> Approve
+                                                                                    </button>
+                                                                                </div>
+                                                                            @elseif($isApproved == 1)
+                                                                                <div class="approved-section mt-2" style="border-top: 1px solid #28a745; padding-top: 8px;">
+                                                                                    <span class="text-success" style="font-size: 11px;">
+                                                                                        <i class="fas fa-check-circle"></i> Approved
+                                                                                    </span>
+                                                                                </div>
+                                                                            @endif
                                                             </td>
                                                             @endforeach
                                                         </tr>
                                                         @endforeach
+
 
                                                         <!-- Midnight Phone row (only in first tab) -->
                                                         @if($department === 'Operations' && $displayMidnightPhone)
@@ -655,6 +698,10 @@
                 return;
             }
 
+            // Get notes from the textarea
+            const notesTextarea = container.closest('.time-slot').querySelector('.notes-input');
+            const notes = notesTextarea ? notesTextarea.value.trim() : '';
+
             // Check if this is an on-call entry
             if (timePickers && timePickers.classList.contains('on-call-type')) {
                 const onCallData = {
@@ -662,6 +709,9 @@
                     end_time: endInput.value,
                     type: 'on_call'
                 };
+                if (notes) {
+                    onCallData.notes = notes;
+                }
                 hiddenInput.value = JSON.stringify(onCallData);
             }
             // Check if this is a reception entry
@@ -671,9 +721,24 @@
                     end_time: endInput.value,
                     type: 'reception'
                 };
+                if (notes) {
+                    receptionData.notes = notes;
+                }
                 hiddenInput.value = JSON.stringify(receptionData);
             } else {
-                hiddenInput.value = `${startInput.value}-${endInput.value}`;
+                // Regular time entry
+                if (notes) {
+                    // Store as JSON if there are notes
+                    const timeData = {
+                        start_time: startInput.value,
+                        end_time: endInput.value,
+                        notes: notes
+                    };
+                    hiddenInput.value = JSON.stringify(timeData);
+                } else {
+                    // Store as simple time range if no notes
+                    hiddenInput.value = `${startInput.value}-${endInput.value}`;
+                }
             }
             window.markAsUnsaved();
         } else if (!startInput.value && !endInput.value) {
@@ -1768,6 +1833,13 @@
                 });
 
                 if (submitResult.isConfirmed) {
+                    // CRITICAL FIX: Update all hidden inputs to reflect current UI state before submission
+                    // This ensures notes and any other UI changes are captured even if no explicit changes were tracked
+                    const allTimeInputContainers = form.querySelectorAll('.time-input-container');
+                    allTimeInputContainers.forEach(container => {
+                        updateHiddenInput(container);
+                    });
+                    
                     window.hasUnsavedChanges = false; // Reset the flag
                     form.submit(); // Actually submit the form
                 }
@@ -1776,14 +1848,30 @@
 
         // Track changes
         document.addEventListener('input', function(e) {
-            if (e.target.matches('input[type="time"], input[type="text"], input[name^="reception"], select[name^="midnight_phone"]')) {
+            if (e.target.matches('input[type="time"], input[type="text"], textarea.notes-input, input[name^="reception"], select[name^="midnight_phone"]')) {
                 markAsUnsaved();
+                
+                // Update hidden input when notes change
+                if (e.target.matches('textarea.notes-input')) {
+                    const container = e.target.closest('.time-slot').querySelector('.time-input-container');
+                    if (container) {
+                        updateHiddenInput(container);
+                    }
+                }
             }
         });
 
         document.addEventListener('change', function(e) {
-            if (e.target.matches('select[name^="midnight_phone"]')) {
+            if (e.target.matches('select[name^="midnight_phone"], textarea.notes-input')) {
                 markAsUnsaved();
+                
+                // Update hidden input when notes change
+                if (e.target.matches('textarea.notes-input')) {
+                    const container = e.target.closest('.time-slot').querySelector('.time-input-container');
+                    if (container) {
+                        updateHiddenInput(container);
+                    }
+                }
             }
         });
 
@@ -1973,6 +2061,147 @@
                 const container = e.target.closest('.time-input-container');
                 removeTimeSlot(container);
                 return; // Exit early
+            }
+        });
+
+        // Individual employee approval functionality
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('.approve-employee-btn') || e.target.closest('.approve-employee-btn')) {
+                e.preventDefault();
+                
+                const button = e.target.matches('.approve-employee-btn') ? e.target : e.target.closest('.approve-employee-btn');
+                const staffId = button.getAttribute('data-staff-id');
+                const date = button.getAttribute('data-date');
+                const staffName = button.getAttribute('data-staff-name');
+                
+                Swal.fire({
+                    title: 'Approve Employee Record?',
+                    html: `Are you sure you want to approve <strong>${staffName}'s</strong> record for <strong>${new Date(date).toLocaleDateString()}</strong>?<br><br>This action cannot be undone.`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#28a745',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, Approve',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Show loading state
+                        button.disabled = true;
+                        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Approving...';
+                        
+                        // FIXED: Collect current data before approval to capture any modifications
+                        const staffRow = button.closest('tr');
+                        const currentData = {};
+                        
+                        // First, update all hidden inputs to reflect current UI state before collecting data
+                        const timeInputContainers = staffRow.querySelectorAll('.time-input-container');
+                        timeInputContainers.forEach(container => {
+                            updateHiddenInput(container);
+                        });
+                        
+                        // Get all hidden inputs for this staff member and date
+                        const hiddenInputs = staffRow.querySelectorAll(`input[type="hidden"][name*="hours[${staffId}][${date}]"]`);
+                        hiddenInputs.forEach((input, index) => {
+                            if (input.value) {
+                                currentData[`timeSlot_${index}`] = input.value;
+                            }
+                        });
+                        
+                        // Get any notes for this staff member and date (as backup)
+                        const notesInputs = staffRow.querySelectorAll('textarea.notes-input');
+                        const notesData = {};
+                        notesInputs.forEach((textarea, index) => {
+                            if (textarea.value.trim()) {
+                                notesData[`notes_${index}`] = textarea.value.trim();
+                            }
+                        });
+
+                        // Make Ajax request with current data
+                        fetch('{{ route("supervisor.approve-employee") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            },
+                            body: JSON.stringify({
+                                staff_id: staffId,
+                                date: date,
+                                current_data: currentData,
+                                notes_data: notesData
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Success notification
+                                Swal.fire({
+                                    title: 'Success!',
+                                    text: data.message || `${staffName}'s record for ${new Date(date).toLocaleDateString()} has been approved.`,
+                                    icon: 'success',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                });
+                                
+                                // Replace approval section with approved status
+                                const approvalSection = button.closest('.approval-section');
+                                approvalSection.innerHTML = `
+                                    <span class="text-success" style="font-size: 11px;">
+                                        <i class="fas fa-check-circle"></i> Approved
+                                    </span>
+                                `;
+                                approvalSection.className = 'approved-section mt-2';
+                                approvalSection.style.borderTop = '1px solid #28a745';
+                                
+                                // Remove unapproved styling from this employee's cell
+                                const cell = button.closest('td');
+                                if (cell) {
+                                    // Remove classes from all elements with unapproved styling
+                                    cell.querySelectorAll('.unapproved-hours, .unapproved-entry, .unapproved-container, .unapproved-input').forEach(el => {
+                                        el.classList.remove('unapproved-hours', 'unapproved-entry', 'unapproved-container', 'unapproved-input');
+                                    });
+                                    
+                                    // Also remove from direct elements that might have these classes
+                                    if (cell.classList.contains('unapproved-hours')) cell.classList.remove('unapproved-hours');
+                                    if (cell.classList.contains('unapproved-entry')) cell.classList.remove('unapproved-entry');
+                                    if (cell.classList.contains('unapproved-container')) cell.classList.remove('unapproved-container');
+                                    if (cell.classList.contains('unapproved-input')) cell.classList.remove('unapproved-input');
+                                    
+                                    // Update data attributes to reflect approved status
+                                    cell.querySelectorAll('[data-approved]').forEach(el => {
+                                        el.setAttribute('data-approved', '1');
+                                    });
+                                    
+                                    console.log('Successfully updated cell styling for staff ID:', staffId, 'date:', date);
+                                } else {
+                                    console.error('Could not find cell element for styling update');
+                                }
+                            } else {
+                                // Error notification
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: data.message || 'Failed to approve record. Please try again.',
+                                    icon: 'error'
+                                });
+                                
+                                // Restore button
+                                button.disabled = false;
+                                button.innerHTML = '<i class="fas fa-check"></i> Approve';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire({
+                                title: 'Error',
+                                text: 'An error occurred while approving the record. Please try again.',
+                                icon: 'error'
+                            });
+                            
+                            // Restore button
+                            button.disabled = false;
+                            button.innerHTML = '<i class="fas fa-check"></i> Approve';
+                        });
+                    }
+                });
             }
         });
     });

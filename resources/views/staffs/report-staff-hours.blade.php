@@ -76,6 +76,56 @@
         border: 1px solid #ffc107;
     }
 
+    /* Approved records styling */
+    .approved-container {
+        background-color: rgba(40, 167, 69, 0.1);
+        border: 1px solid #28a745;
+        border-radius: 4px;
+        padding: 3px;
+        position: relative;
+    }
+
+    .approved-input {
+        background-color: rgba(40, 167, 69, 0.05) !important;
+        border-color: #28a745 !important;
+        cursor: not-allowed !important;
+        pointer-events: none !important; /* Completely disable mouse interactions */
+        user-select: none !important; /* Prevent text selection */
+    }
+    
+    /* Ensure approved containers also show not-allowed cursor */
+    .approved-container {
+        cursor: not-allowed !important;
+    }
+    
+    /* Style for approved inputs when they try to be focused */
+    .approved-input:focus {
+        outline: none !important;
+        box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.3) !important;
+    }
+
+    .approved-badge {
+        position: absolute;
+        top: -8px;
+        right: -5px;
+        background: #28a745;
+        color: white;
+        font-size: 0.6rem;
+        font-weight: bold;
+        padding: 1px 4px;
+        border-radius: 3px;
+        z-index: 5;
+        border: 1px solid #1e7e34;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Hover effect for approved containers */
+    .approved-container:hover {
+        background-color: rgba(40, 167, 69, 0.15);
+        border-color: #1e7e34;
+        transition: all 0.2s ease;
+    }
+
     /* Mobile responsive */
     @media (max-width: 768px) {
         .unapproved-container::before {
@@ -226,7 +276,8 @@
                                                                 @php
                                                                 $dateString = $date->format('Y-m-d');
                                                                 $hoursData = $staffHours[$staff->id][$dateString]['hours_data'] ?? [];
-                                                                $isApproved = $staffHours[$staff->id][$dateString]['is_approved'] ?? 1; // Get approval status
+                                                                // Only set approval status if record exists, otherwise null for empty slots
+                                                                $isApproved = isset($staffHours[$staff->id][$dateString]) ? $staffHours[$staff->id][$dateString]['is_approved'] : null;
                                                                 $staffDateKey = $staff->id . '_' . $dateString;
                                                                 $sickLeaveInfo = $sickLeaveStatuses[$staffDateKey] ?? null;
                                                                 @endphp
@@ -329,7 +380,8 @@
                                                                                         } elseif (isset($timeRange['start_time']) && isset($timeRange['end_time'])) {
                                                                                             $displayStartTime = $timeRange['start_time'];
                                                                                             $displayEndTime = $timeRange['end_time'];
-                                                                                            $hiddenValue = $displayStartTime . '-' . $displayEndTime;
+                                                                                            // Preserve the full JSON object to maintain notes and other data
+                                                                                            $hiddenValue = json_encode($timeRange);
                                                                                         }
                                                                                     }
                                                                                     // Handle string values
@@ -367,7 +419,7 @@
                                                                                 @endif
                                                                                 
                                                                                     @if(!$isSpecialType)
-                                                                                        @if($isApproved == 0)
+                                                                                        @if($isApproved === 0)
                                                                                             <div class="unapproved-container">
                                                                                                 <div class="basic-time-row">
                                                                                                     <input type="time" 
@@ -383,7 +435,26 @@
                                                                                                         {{ $isSpecialType || $isOwnRoster ? 'disabled' : '' }}>
                                                                                                 </div>
                                                                                             </div>
+                                                                                        @elseif($isApproved === 1)
+                                                                                            <div class="basic-time-row approved-container">
+                                                                                                <input type="time" 
+                                                                                                    class="form-control form-control-sm time-start approved-input"
+                                                                                                    value="{{ $displayStartTime }}"
+                                                                                                    disabled
+                                                                                                    title="This record has been approved and cannot be modified">
+                                                                                                
+                                                                                                <span class="time-separator mx-1">-</span>
+                                                                                                
+                                                                                                <input type="time" 
+                                                                                                    class="form-control form-control-sm time-end approved-input"
+                                                                                                    value="{{ $displayEndTime }}"
+                                                                                                    disabled
+                                                                                                    title="This record has been approved and cannot be modified">
+                                                                                                
+                                                                                                <span class="approved-badge">✓ APPROVED</span>
+                                                                                            </div>
                                                                                         @else
+                                                                                            <!-- This is for empty slots (isApproved is null) -->
                                                                                             <div class="basic-time-row">
                                                                                                 <input type="time" 
                                                                                                     class="form-control form-control-sm time-start"
@@ -443,13 +514,14 @@
                                                                                 @endif
 
                                                                                 <div class="dropdown d-inline-block">
-                                                                                    <button class="btn btn-sm btn-secondary dropdown-toggle {{ $isOwnRoster ? 'disabled' : '' }}" 
+                                                                                    <button class="btn btn-sm btn-secondary dropdown-toggle {{ $isOwnRoster || $isApproved === 1 ? 'disabled' : '' }}" 
                                                                                             type="button" 
                                                                                             data-toggle="dropdown"
-                                                                                            {{ $isOwnRoster ? 'disabled' : '' }}>
+                                                                                            {{ $isOwnRoster || $isApproved === 1 ? 'disabled' : '' }}
+                                                                                            {{ $isApproved === 1 ? 'title=This record has been approved and cannot be modified' : '' }}>
                                                                                         <i class="fas fa-ellipsis-h"></i>
                                                                                     </button>
-                                                                                    @if(!$isOwnRoster)
+                                                                                    @if(!$isOwnRoster && $isApproved !== 1)
                                                                                     <div class="dropdown-menu">
                                                                                         <button type="button" class="dropdown-item quick-fill" data-value="V">Day Off (V)</button>
                                                                                         <button type="button" class="dropdown-item quick-fill" data-value="X">Day Off (X)</button>
@@ -487,6 +559,18 @@
                                                                                 </div>
                                                                                 @endif
                                                                             </div>
+
+                                                                            <!-- Notes Field -->
+                                                                            @if(!$isOwnRoster && !$isSpecialType)
+                                                                            <div class="notes-container mt-2 mb-2">
+                                                                                <small class="text-muted d-block mb-1" style="font-size: 10px;">Notes:</small>
+                                                                                <textarea class="form-control form-control-sm notes-input {{ $isApproved === 1 ? 'approved-input' : '' }}" 
+                                                                                         rows="2" 
+                                                                                         placeholder="{{ $isApproved === 1 && empty($timeRange['notes'] ?? '') ? 'Notes (Read-only - Record approved)' : 'Add notes for this time entry...' }}"
+                                                                                         {{ $isApproved === 1 ? 'disabled readonly title="This record has been approved and cannot be modified"' : '' }}
+                                                                                         style="font-size: 11px; resize: vertical; min-height: 35px; width: 100%;">{{ $timeRange['notes'] ?? '' }}</textarea>
+                                                                            </div>
+                                                                            @endif
                                                                         </div>
                                                                         @empty
                                                                         <!-- Empty time slot for new entries -->
@@ -564,6 +648,17 @@
                                                                                 </div>
                                                                                 @endif
                                                                             </div>
+
+                                                                            <!-- Notes Field for Empty Slot -->
+                                                                            @if(!$isOwnRoster)
+                                                                            <div class="notes-container mt-2 mb-2">
+                                                                                <small class="text-muted d-block mb-1" style="font-size: 10px;">Notes:</small>
+                                                                                <textarea class="form-control form-control-sm notes-input" 
+                                                                                         rows="2" 
+                                                                                         placeholder="Add notes for this time entry..."
+                                                                                         style="font-size: 11px; resize: vertical; min-height: 35px; width: 100%;"></textarea>
+                                                                            </div>
+                                                                            @endif
                                                                         </div>
                                                                         @endforelse
                                                                     </div>
@@ -639,6 +734,10 @@ window.updateHiddenInput = function(container) {
     const endInput = container.querySelector('.time-end');
     const hiddenInput = container.querySelector('input[type="hidden"]');
     const timePickers = container.querySelector('.time-pickers');
+    
+    // Look for notes input in the parent time-slot since it's outside the time-input-container
+    const timeSlot = container.closest('.time-slot');
+    const notesInput = timeSlot ? timeSlot.querySelector('.notes-input') : null;
 
     if (!startInput || !endInput || !hiddenInput) return;
 
@@ -672,6 +771,10 @@ window.updateHiddenInput = function(container) {
                 end_time: endInput.value,
                 type: 'on_call'
             };
+            // Add notes if available
+            if (notesInput && notesInput.value.trim()) {
+                onCallData.notes = notesInput.value.trim();
+            }
             hiddenInput.value = JSON.stringify(onCallData);
         }
         // Check if this is a reception entry
@@ -681,9 +784,23 @@ window.updateHiddenInput = function(container) {
                 end_time: endInput.value,
                 type: 'reception'
             };
+            // Add notes if available
+            if (notesInput && notesInput.value.trim()) {
+                receptionData.notes = notesInput.value.trim();
+            }
             hiddenInput.value = JSON.stringify(receptionData);
         } else {
-            hiddenInput.value = `${startInput.value}-${endInput.value}`;
+            // Always use JSON format for consistency
+            const timeData = {
+                start_time: startInput.value,
+                end_time: endInput.value,
+                type: 'normal'
+            };
+            // Add notes if available
+            if (notesInput && notesInput.value.trim()) {
+                timeData.notes = notesInput.value.trim();
+            }
+            hiddenInput.value = JSON.stringify(timeData);
         }
         window.markAsUnsaved();
     } else if (!startInput.value && !endInput.value) {
@@ -772,6 +889,23 @@ function initFlatpickrForContainer(container) {
 
     // Skip if already initialized with Flatpickr
     if (startInput.classList.contains('flatpickr-initialized')) return;
+
+    // CRITICAL FIX: Check if this is an approved record - do NOT initialize Flatpickr for approved records
+    const approvedContainer = container.closest('.approved-container');
+    const isApproved = startInput.classList.contains('approved-input') || 
+                       endInput.classList.contains('approved-input') || 
+                       approvedContainer !== null;
+    
+    if (isApproved) {
+        // For approved records, ensure inputs stay disabled and return early
+        startInput.disabled = true;
+        endInput.disabled = true;
+        startInput.style.cursor = 'not-allowed';
+        endInput.style.cursor = 'not-allowed';
+        startInput.title = 'This record has been approved and cannot be modified';
+        endInput.title = 'This record has been approved and cannot be modified';
+        return; // Don't initialize Flatpickr for approved records
+    }
 
     // CRITICAL FIX: Check if we're in the middle of converting to regular hours
     const isConvertingToRegular = container.classList.contains('converting-to-regular');
@@ -1486,6 +1620,18 @@ function applyQuickFill(container, value) {
         if (e.target.classList.contains('remove-time-slot') || e.target.closest('.remove-time-slot')) {
             e.preventDefault();
             const container = e.target.closest('.time-input-container');
+            
+            // CRITICAL: Check if this is an approved record
+            if (container.querySelector('.approved-container')) {
+                Swal.fire({
+                    title: 'Cannot Remove Approved Record',
+                    text: 'This record has been approved and cannot be removed. Only administrators and supervisors can modify approved records.',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+                return; // Exit early - don't allow removal
+            }
+            
             removeTimeSlot(container);
         }
 
@@ -1559,6 +1705,10 @@ function applyQuickFill(container, value) {
     document.querySelectorAll('.department-form').forEach(form => {
     form.addEventListener('submit', async function(e) {
         e.preventDefault(); // Prevent default submission
+        
+        // Note: Approved records are disabled in the UI, so users cannot modify them
+        // Backend validation will catch any programmatic attempts to modify approved records
+        // This allows users to add new entries to empty slots even when approved records exist
         
         // Get the department from the hidden input
         const departmentInput = form.querySelector('input[name="department"]');
@@ -1739,16 +1889,63 @@ function applyQuickFill(container, value) {
 
     // Track changes
     document.addEventListener('input', function(e) {
-        if (e.target.matches('input[type="time"], input[type="text"], input[name^="reception"], select[name^="midnight_phone"]')) {
+        if (e.target.matches('input[type="time"], input[type="text"], textarea.notes-input, input[name^="reception"], select[name^="midnight_phone"]')) {
             markAsUnsaved();
+            
+            // Update hidden input when notes change
+            if (e.target.matches('textarea.notes-input')) {
+                const container = e.target.closest('.time-slot').querySelector('.time-input-container');
+                if (container) {
+                    updateHiddenInput(container);
+                }
+            }
         }
     });
 
     document.addEventListener('change', function(e) {
-        if (e.target.matches('select[name^="midnight_phone"]')) {
+        if (e.target.matches('select[name^="midnight_phone"], textarea.notes-input')) {
             markAsUnsaved();
+            
+            // Update hidden input when notes change
+            if (e.target.matches('textarea.notes-input')) {
+                const container = e.target.closest('.time-slot').querySelector('.time-input-container');
+                if (container) {
+                    updateHiddenInput(container);
+                }
+            }
         }
     });
+
+    // Add click prevention for approved inputs - CRITICAL FIX
+    document.addEventListener('click', function(e) {
+        // Check if the clicked element is an approved time input
+        if (e.target.matches('.approved-input') || e.target.closest('.approved-container')) {
+            // Prevent the click from triggering Flatpickr or any other interaction
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            // Show a user-friendly message
+            Swal.fire({
+                title: 'Record Approved',
+                text: 'This record has been approved and cannot be modified. Contact your supervisor or administrator for changes.',
+                icon: 'info',
+                confirmButtonText: 'OK',
+                timer: 3000,
+                timerProgressBar: true
+            });
+            
+            return false;
+        }
+    }, true); // Use capture phase to catch the event early
+    
+    // Also prevent focus events on approved inputs
+    document.addEventListener('focus', function(e) {
+        if (e.target.matches('.approved-input')) {
+            e.target.blur(); // Remove focus
+            e.preventDefault();
+        }
+    }, true);
 
     // Initialize all time inputs with Flatpickr
     initializeAllTimeInputs();
@@ -1924,6 +2121,18 @@ document.addEventListener('click', function(e) {
     if (e.target.classList.contains('quick-fill')) {
         e.preventDefault();
         const container = e.target.closest('.time-input-container');
+        
+        // CRITICAL: Check if this is an approved record
+        if (container.querySelector('.approved-container')) {
+            Swal.fire({
+                title: 'Cannot Modify Approved Record',
+                text: 'This record has been approved and cannot be modified. Only administrators and supervisors can modify approved records.',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+            return; // Exit early - don't allow modification
+        }
+        
         const value = e.target.dataset.value;
         applyQuickFill(container, value);
         return; // Exit early
@@ -1934,6 +2143,18 @@ document.addEventListener('click', function(e) {
     if (e.target.classList.contains('remove-time-slot') || e.target.closest('.remove-time-slot')) {
         e.preventDefault();
         const container = e.target.closest('.time-input-container');
+        
+        // CRITICAL: Check if this is an approved record
+        if (container.querySelector('.approved-container')) {
+            Swal.fire({
+                title: 'Cannot Remove Approved Record',
+                text: 'This record has been approved and cannot be removed. Only administrators and supervisors can modify approved records.',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+            return; // Exit early - don't allow removal
+        }
+        
         removeTimeSlot(container);
         return; // Exit early
     }
@@ -2863,6 +3084,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const endInput = container.querySelector('.time-end');
             const hiddenInput = container.parentElement.querySelector('input[type="hidden"]');
             
+            // Look for notes input in the parent time-slot since it's outside the time-input-container
+            const timeSlot = container.closest('.time-slot');
+            const notesInput = timeSlot ? timeSlot.querySelector('.notes-input') : null;
+            
             if (!startInput || !endInput || !hiddenInput) return;
             
             if (startInput.disabled && ['V', 'X', 'H'].includes(hiddenInput.value)) {
@@ -2889,12 +3114,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 // Check if this is an on-call entry
+                const timePickers = container.querySelector('.time-pickers');
                 if (timePickers && timePickers.classList.contains('on-call-type')) {
                     const onCallData = {
                         start_time: startInput.value,
                         end_time: endInput.value,
                         type: 'on_call'
                     };
+                    // Add notes if available
+                    if (notesInput && notesInput.value.trim()) {
+                        onCallData.notes = notesInput.value.trim();
+                    }
                     hiddenInput.value = JSON.stringify(onCallData);
                 }
                 // Check if this is a reception entry
@@ -2904,9 +3134,23 @@ document.addEventListener('DOMContentLoaded', function() {
                         end_time: endInput.value,
                         type: 'reception'
                     };
+                    // Add notes if available
+                    if (notesInput && notesInput.value.trim()) {
+                        receptionData.notes = notesInput.value.trim();
+                    }
                     hiddenInput.value = JSON.stringify(receptionData);
                 } else {
-                    hiddenInput.value = `${startInput.value}-${endInput.value}`;
+                    // Always use JSON format for consistency
+                    const timeData = {
+                        start_time: startInput.value,
+                        end_time: endInput.value,
+                        type: 'normal'
+                    };
+                    // Add notes if available
+                    if (notesInput && notesInput.value.trim()) {
+                        timeData.notes = notesInput.value.trim();
+                    }
+                    hiddenInput.value = JSON.stringify(timeData);
                 }
                 window.markAsUnsaved();
             } else if (!startInput.value && !endInput.value) {
@@ -3015,12 +3259,30 @@ document.addEventListener('DOMContentLoaded', function() {
     if (startInput) startInput.classList.remove('is-invalid');
     if (endInput) endInput.classList.remove('is-invalid');
     
+    // Clear notes field
+    const notesTextarea = newTimeSlot.querySelector('.notes-input');
+    if (notesTextarea) {
+        notesTextarea.value = '';
+    }
+    
     // Append the new time slot
     timeSlots.appendChild(newTimeSlot);
     
     // Initialize Flatpickr for the new time inputs immediately
     setTimeout(() => {
         initFlatpickrForContainer(timeInputContainer);
+        
+        // Add event listeners for notes field
+        const notesTextarea = newTimeSlot.querySelector('.notes-input');
+        if (notesTextarea) {
+            notesTextarea.addEventListener('input', function() {
+                const container = newTimeSlot.querySelector('.time-input-container');
+                if (container) {
+                    updateHiddenInput(container);
+                }
+            });
+        }
+        
         markAsUnsaved();
     }, 100);
 };

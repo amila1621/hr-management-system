@@ -1,12 +1,25 @@
+<?php
+$pendingExtraHoursCount = \App\Models\ExtraHoursRequest::where('status', 'pending')->count();
+?>
+
 <li>
     <a href="{{ route('dashboard') }}" class="waves-effect">
         <i class="fas fa-tachometer-alt"></i><span> Dashboard </span>
     </a>
 </li>
 
+<li>
+    <a href="{{ route('admin.extra-hours-requests') }}">
+        <i class="fas fa-clock"></i> Extra Hours Requests
+        @if($pendingExtraHoursCount > 0)
+        <span class="badge badge-warning">{{ $pendingExtraHoursCount }}</span>
+        @endif
+    </a>
+</li>
+
 
 <li>
-    <a href="{{ route('guide-supervisor.enter-working-hours') }}" class="waves-effect">
+    <a href="{{ route('staff.report-hours') }}" class="waves-effect">
         <i class="fas fa-tasks"></i><span> Report Working Hours </span>
     </a>
 </li>

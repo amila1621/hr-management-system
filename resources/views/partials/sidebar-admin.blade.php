@@ -4,6 +4,7 @@ $pendingApprovalsCount = \App\Models\EventSalary::where('is_guide_updated', 1)->
 $pending16PlusApprovalsCount = \App\Models\EventSalary::where('approval_status', 5)->count();
 $pendingReceiptsCount = \App\Models\Receipts::whereIn('status', [0, 1])->count();
 $pendingSickLeaveCount = \App\Models\SupervisorSickLeaves::where('admin_id', null)->whereIn('status', [0,1])->count();
+$pendingExtraHoursCount = \App\Models\ExtraHoursRequest::where('status', 'pending')->count();
 ?>
 
 
@@ -56,6 +57,8 @@ $pendingSickLeaveCount = \App\Models\SupervisorSickLeaves::where('admin_id', nul
         <span class="badge badge-danger">{{ $pendingApprovalsCount }}</span>
     </a>
 </li>
+
+
 
 <li>
     <a href="{{ route('admin.manage-sick-leaves') }}" class="waves-effect">
