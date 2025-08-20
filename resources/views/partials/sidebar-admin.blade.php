@@ -196,18 +196,6 @@ $pendingExtraHoursCount = \App\Models\ExtraHoursRequest::where('status', 'pendin
 </li>
 
 <li>
-    <a href="{{ route('reports.monthly-report-create') }}" class="waves-effect">
-        <i class="fas fa-calendar-alt"></i><span> Monthly Report </span>
-    </a>
-</li>
-
-<li>
-    <a href="{{ route('reports.monthly-report-christmas') }}" class="waves-effect">
-        <i class="fas fa-gift"></i><span> Monthly Report(Christmas) </span>
-    </a>
-</li>
-
-<li>
     <a href="{{ route('reports.guide-time-report-christmas') }}" class="waves-effect">
         <i class="fas fa-snowflake"></i><span> Guide Time Report (Christmas) </span>
     </a>

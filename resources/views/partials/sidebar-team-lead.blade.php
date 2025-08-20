@@ -178,18 +178,6 @@ $pendingSickLeaveCount = \App\Models\SupervisorSickLeaves::where('admin_id', nul
 </li>
 
 <li>
-    <a href="{{ route('reports.monthly-report-christmas') }}" class="waves-effect">
-        <i class="fas fa-gift"></i><span> Monthly Report(Christmas) </span>
-    </a>
-</li>
-
-<li>
-    <a href="{{ route('reports.guide-time-report-christmas') }}" class="waves-effect">
-        <i class="fas fa-snowflake"></i><span> Guide Time Report (Christmas) </span>
-    </a>
-</li>
-
-<li>
     <a href="{{ route('guides.working-hours') }}" class="waves-effect">
         <i class="fas fa-calendar-week"></i><span> 3 Weeks Reports </span>
     </a>
