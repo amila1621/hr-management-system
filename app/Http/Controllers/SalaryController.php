@@ -1997,4 +1997,109 @@ class SalaryController extends Controller
         ]);
     }
 
+    public function getEventDetails(Request $request)
+    {
+        try {
+            $eventId = $request->input('event_id');
+            
+            if (!$eventId) {
+                throw new \Exception('Event ID is required');
+            }
+            
+            $event = Event::find($eventId);
+            
+            if (!$event) {
+                throw new \Exception('Event not found');
+            }
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'name' => $event->name,
+                    'description' => $event->description,
+                    'original_description' => $event->original_description ?? $event->description,
+                    'start_time' => $event->start_time,
+                    'end_time' => $event->end_time
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function extractDirect(Request $request)
+    {
+        try {
+            $eventId = $request->input('event_id');
+            
+            if (!$eventId) {
+                throw new \Exception('Event ID is required');
+            }
+            
+            $event = Event::find($eventId);
+            
+            if (!$event) {
+                throw new \Exception('Event not found');
+            }
+            
+            // Use the existing extractEventData method to get the same structure as AI
+            $eventData = $this->extractEventData($event->name, $event->description);
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'event_info' => [
+                        'name' => $event->name,
+                        'date' => Carbon::parse($event->start_time)->format('Y-m-d'),
+                    ],
+                    'guides' => $eventData['guides'],
+                    'helpers' => $eventData['helpers'],
+                    'office_time' => $eventData['office_time'],
+                    'original_description' => $event->original_description ?? $event->description
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function calculateDirect(Request $request)
+    {
+        try {
+            $eventId = $request->input('event_id');
+            
+            if (!$eventId) {
+                throw new \Exception('Event ID is required');
+            }
+            
+            $event = Event::find($eventId);
+            
+            if (!$event) {
+                throw new \Exception('Event not found');
+            }
+            
+            // Use the existing eventsalary method without AI processing
+            $this->eventsalary($eventId);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Event salary calculated successfully without AI'
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }

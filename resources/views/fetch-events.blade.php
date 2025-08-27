@@ -42,7 +42,7 @@
                 <div class="row">
                     
 
-                    <div class="col-lg-5">
+                    {{-- <div class="col-lg-5">
                         <div class="card">
                             <div class="card-body">
 
@@ -69,6 +69,37 @@
                         </div>
 
 
+                    </div> --}}
+
+                    <div class="col-lg-5">
+                        <div class="card">
+                            <div class="card-body">
+
+                                <h1 class="mt-0 header-title">Sync Tours from API</h1>
+
+                                <form id="syncToursForm">
+                                    @csrf
+                                    <div class="form-group">
+                                        <label>Select Date Range</label>
+                                        <div>
+                                            <div class="input-group">
+                                                <input type="text" name="daterange" class="form-control" autocomplete="off" />
+                                                <input type="hidden" name="start" />
+                                                <input type="hidden" name="end" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button class="btn btn-success waves-effect waves-light" type="submit">
+                                        <i class="fas fa-sync-alt"></i> Sync Tours
+                                    </button>
+
+                                    <div id="syncResult" class="mt-3" style="display: none;">
+                                        <div id="syncAlert" class="alert"></div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="col-lg-5">
@@ -189,6 +220,62 @@
                     $(this).val('');
                     $('input[name="start"]').val('');
                     $('input[name="end"]').val('');
+                });
+
+                // Handle sync tours form submission
+                $('#syncToursForm').on('submit', function(e) {
+                    e.preventDefault();
+                    
+                    var startDate = $('input[name="start"]').val();
+                    var endDate = $('input[name="end"]').val();
+                    
+                    if (!startDate || !endDate) {
+                        alert('Please select a date range');
+                        return;
+                    }
+                    
+                    var submitBtn = $(this).find('button[type="submit"]');
+                    submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Syncing...');
+                    
+                    $.ajax({
+                        url: '{{ route("api.sync-tours") }}',
+                        method: 'POST',
+                        data: {
+                            start_date: startDate,
+                            end_date: endDate,
+                            _token: $('input[name="_token"]').val()
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                $('#syncAlert').removeClass('alert-danger').addClass('alert-success')
+                                    .html('<i class="fas fa-check"></i> ' + response.message + 
+                                          '<br><small>Synced: ' + response.synced + 
+                                          ', Skipped: ' + response.skipped + 
+                                          ', Total Fetched: ' + response.total_fetched + '</small>');
+                                          
+                                if (response.errors && response.errors.length > 0) {
+                                    $('#syncAlert').append('<br><strong>Errors:</strong><ul>');
+                                    response.errors.forEach(function(error) {
+                                        $('#syncAlert').append('<li>' + error + '</li>');
+                                    });
+                                    $('#syncAlert').append('</ul>');
+                                }
+                            } else {
+                                $('#syncAlert').removeClass('alert-success').addClass('alert-danger')
+                                    .html('<i class="fas fa-times"></i> ' + response.message);
+                            }
+                            $('#syncResult').show();
+                        },
+                        error: function(xhr) {
+                            var errorMsg = xhr.responseJSON ? xhr.responseJSON.message : 'An error occurred';
+                            $('#syncAlert').removeClass('alert-success').addClass('alert-danger')
+                                .html('<i class="fas fa-times"></i> Error: ' + errorMsg);
+                            $('#syncResult').show();
+                        },
+                        complete: function() {
+                            submitBtn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Sync Tours');
+                        }
+                    });
                 });
             });
         </script>

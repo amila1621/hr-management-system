@@ -9,7 +9,7 @@
 
 <body>
     <h1>Fetch Google Calendar Events</h1>
-    <form action="{{ route('fetch.events') }}" method="get">
+    <form action="{{ route('dashboard') }}" method="get">
         <button type="submit">Proceed</button>
     </form>
 

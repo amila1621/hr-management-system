@@ -18,6 +18,7 @@ use App\Http\Controllers\StaffController;
 use App\Http\Controllers\SupervisorController;
 use App\Http\Controllers\SyncDatabasesController;
 use App\Http\Controllers\TourDurationController;
+use App\Http\Controllers\TourSyncController;
 use App\Http\Controllers\AccountantController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TourGuideController;
@@ -67,8 +68,12 @@ Route::middleware(['auth','activity'])->group(function () {
     Route::get('/fixxx', [GoogleCalendarController::class, 'fixxx'])->name('fixxx');
 
 
-    Route::get('/fetch-events', [GoogleCalendarController::class, 'fetchAndStoreEvents'])->name('fetch.events');
+    // Route::get('/fetch-events', [GoogleCalendarController::class, 'fetchAndStoreEvents'])->name('fetch.events');
     Route::get('/', [GoogleCalendarController::class, 'dashboard'])->name('dashboard');
+    
+    // Tour sync routes
+    Route::get('/sync-tours', [TourSyncController::class, 'syncToursPage'])->name('tours.sync');
+    Route::post('/api/sync-tours', [TourSyncController::class, 'fetchTours'])->name('api.sync-tours');
     Route::post('/fetch-filter-events', [GoogleCalendarController::class, 'fetchFilterEvents'])->name('fetch.filter.events');
     Route::post('/fetch-filter-chores', [GoogleCalendarController::class, 'fetchFilterChores'])->name('fetch.filter.chores');
     Route::get('/all-events', [GoogleCalendarController::class, 'fetchAllEvents'])->name('fetch.all.events');
@@ -389,6 +394,9 @@ Route::get('/fix-storage-link', function () {
 })->name('fix-storage-link');
 
 Route::post('/calculate-pickup-duration', [SalaryController::class, 'calculatePickupDuration'])->name('calculate.pickup.duration');
+Route::post('/salary/get-event-details', [SalaryController::class, 'getEventDetails'])->name('salary.get-event-details');
+Route::post('/salary/extract-direct', [SalaryController::class, 'extractDirect'])->name('salary.extract-direct');
+Route::post('/salary/calculate-direct', [SalaryController::class, 'calculateDirect'])->name('salary.calculate-direct');
 });
 
 

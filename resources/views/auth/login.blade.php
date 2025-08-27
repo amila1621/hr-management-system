@@ -24,7 +24,7 @@
 
     <!-- Begin page -->
     <div class="home-btn d-none d-sm-block">
-        <a href=" {{ route('fetch.events') }}" class="text-white"><i class="mdi mdi-home h1"></i></a>
+        <a href=" {{ route('dashboard') }}" class="text-white"><i class="mdi mdi-home h1"></i></a>
     </div>
 
     <div class="wrapper-page">

@@ -290,12 +290,15 @@
                                                     <td> 
                                                         @if($evente->status != 1)
                                                             <div class="btn-group" role="group">
-                                                                <a class="btn btn-secondary" style="color:aquamarine" href="/event-salary/{{ $evente->id }}">Calculate Hours</a>
-                                                                <button class="btn btn-info" 
+                                                                {{-- <a class="btn btn-secondary" style="color:aquamarine" href="/event-salary/{{ $evente->id }}">Calculate Hours</a> --}}
+                                                                <button class="btn btn-success" 
                                                                         data-event-id="{{ $evente->id }}" 
-                                                                        onclick="calculateWithAI(this)">Calculate with AI</button>
+                                                                        onclick="calculateDirect(this)">Calculate</button>
+                                                                {{-- <button class="btn btn-info" 
+                                                                        data-event-id="{{ $evente->id }}" 
+                                                                        onclick="calculateWithAI(this)">Calculate with AI</button> --}}
                                                                 <button class="btn btn-warning btn-sm" onclick="ignoreEvent('{{ $evente->id }}')">Ignore</button>
-                                                                <button class="btn btn-primary btn-sm" onclick="openManualEntryModal('{{ $evente->id }}')">Add Manually</button>
+                                                                {{-- <button class="btn btn-primary btn-sm" onclick="openManualEntryModal('{{ $evente->id }}')">Add Manually</button> --}}
                                                             </div>
                                                         @endif
                                                     </td>
@@ -462,6 +465,61 @@
                         icon: 'error',
                         title: 'Error',
                         text: 'Failed to analyze event details'
+                    });
+                }
+            });
+        }
+
+        function calculateDirect(element) {
+            const eventId = $(element).data('event-id');
+            const eventName = $(element).closest('tr').find('td:first').text();
+            
+            Swal.fire({
+                title: 'Processing',
+                text: 'Extracting event details...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Call the same extraction endpoint but without AI analysis
+            $.ajax({
+                url: '{{ route("salary.extract-direct") }}',
+                method: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    event_id: eventId,
+                },
+                success: function(response) {
+                    Swal.close();
+                    if (response.success) {
+                        response.data.event_info = response.data.event_info || {};
+                        response.data.event_info.name = eventName;
+                        
+                        // Use the same modal and population function as AI
+                        populateAIModal(response.data, eventId);
+                        
+                        // Change the modal title to indicate direct extraction
+                        $('#aiCalculationModalLabel').text('Direct Calculation Results');
+                        
+                        // Show the modal
+                        $('#aiCalculationModal').modal('show').on('shown.bs.modal', function () {
+                            $('#eventDescription').html(response.data.original_description || 'No description available');
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: response.message
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to extract event details'
                     });
                 }
             });
