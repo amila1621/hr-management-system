@@ -370,34 +370,23 @@ class SalaryController extends Controller
             // Check if pickup location is office
             $isOfficePickup = stripos($guideData['pickup_location'], 'office') !== false;
 
-            // Calculate initial adjusted start time
-            $initialAdjustedStartTime = $isOfficePickup ? $guideStartTime->copy() : $guideStartTime->copy()->subMinutes($locationDuration);
-
-            // Calculate duration to office
-
             if (!isset($eventData['office_time']) || $eventData['office_time'] === null) {
                 throw new \Exception("Office time is missing in the event description.");
             }
-            
-            $officeTime = Carbon::parse($startDateTime->format('Y-m-d') . ' ' . $eventData['office_time']);
-            $durationToOffice = $isOfficePickup ? 0 : $initialAdjustedStartTime->diffInMinutes($officeTime);
 
-            
-
-            // Apply 30-minute deduction rule
-            if ($durationToOffice > 30) {
-                $adjustedDuration = $durationToOffice - 30;
+            // Calculate start and end times with pickup duration
+            if ($isOfficePickup) {
+                // Office pickup: no travel time needed
+                $adjustedGuideStartTime = $guideStartTime->copy();
+                $guideEndTime = $guideStartTime->copy()->addMinutes($durationInMinutes);
             } else {
-                $adjustedDuration = 0;
+                // Remote pickup: subtract travel time from start, add travel time to end
+                $adjustedGuideStartTime = $guideStartTime->copy()->subMinutes($locationDuration);
+                $guideEndTime = $guideStartTime->copy()->addMinutes($durationInMinutes)->addMinutes($locationDuration);
             }
 
-
-
-            // Calculate final adjusted start time
-            $adjustedGuideStartTime = $guideStartTime->copy()->subMinutes($adjustedDuration);
-            Log::info("Adjusted duration 001: {$durationToOffice}");
-            // Calculate end time
-            $guideEndTime = $guideStartTime->copy()->addMinutes($durationInMinutes)->addMinutes($adjustedDuration);
+            Log::info("Location duration: {$locationDuration} minutes");
+            Log::info("Adjusted start time: {$adjustedGuideStartTime}, End time: {$guideEndTime}");
 
             // Check if the tour spans across midnight
             if ($adjustedGuideStartTime->day != $guideEndTime->day) {
@@ -872,34 +861,24 @@ class SalaryController extends Controller
     
                 // Check if pickup location is office
                 $isOfficePickup = stripos($guideData['pickup_location'], 'office') !== false;
-    
-                // Calculate initial adjusted start time
-                $initialAdjustedStartTime = $isOfficePickup ? $guideStartTime->copy() : $guideStartTime->copy()->subMinutes($locationDuration);
-    
-                // Calculate duration to office
-    
+
                 if (!isset($eventData['office_time']) || $eventData['office_time'] === null) {
                     throw new \Exception("Office time is missing in the event description.");
                 }
-                
-                $officeTime = Carbon::parse($startDateTime->format('Y-m-d') . ' ' . $eventData['office_time']);
-                $durationToOffice = $isOfficePickup ? 0 : $initialAdjustedStartTime->diffInMinutes($officeTime);
-    
-                
-    
-                // Apply 30-minute deduction rule
-                if ($durationToOffice > 30) {
-                    $adjustedDuration = $durationToOffice - 30;
+
+                // Calculate start and end times with pickup duration
+                if ($isOfficePickup) {
+                    // Office pickup: no travel time needed
+                    $adjustedGuideStartTime = $guideStartTime->copy();
+                    $guideEndTime = $guideStartTime->copy()->addMinutes($durationInMinutes);
                 } else {
-                    $adjustedDuration = 0;
+                    // Remote pickup: subtract travel time from start, add travel time to end
+                    $adjustedGuideStartTime = $guideStartTime->copy()->subMinutes($locationDuration);
+                    $guideEndTime = $guideStartTime->copy()->addMinutes($durationInMinutes)->addMinutes($locationDuration);
                 }
-    
-    
-                // Calculate final adjusted start time
-                $adjustedGuideStartTime = $guideStartTime->copy()->subMinutes($adjustedDuration);
-                Log::info("Adjusted duration 001: {$durationToOffice}");
-                // Calculate end time
-                $guideEndTime = $guideStartTime->copy()->addMinutes($durationInMinutes)->addMinutes($adjustedDuration);
+
+                Log::info("Location duration: {$locationDuration} minutes");
+                Log::info("Adjusted start time: {$adjustedGuideStartTime}, End time: {$guideEndTime}");
     
                 // Check if the tour spans across midnight
                 if ($adjustedGuideStartTime->day != $guideEndTime->day) {
@@ -1033,25 +1012,19 @@ class SalaryController extends Controller
                 // Check if pickup location is office
                 $isOfficePickup = stripos($guideData['pickup_location'], 'office') !== false;
 
-                // Calculate initial adjusted start time
-                $initialAdjustedStartTime = $isOfficePickup ? $guideStartTime->copy() : $guideStartTime->copy()->subMinutes($locationDuration);
-
-                // Calculate duration to office
-                $officeTime = Carbon::parse($startDateTime->format('Y-m-d') . ' ' . $eventData['office_time']);
-                $durationToOffice = $isOfficePickup ? 0 : $initialAdjustedStartTime->diffInMinutes($officeTime);
-
-                // Apply 30-minute deduction rule
-                if ($durationToOffice > 30) {
-                    $adjustedDuration = $durationToOffice - 30;
+                // Calculate start and end times with pickup duration
+                if ($isOfficePickup) {
+                    // Office pickup: no travel time needed
+                    $adjustedGuideStartTime = $guideStartTime->copy();
+                    $guideEndTime = $guideStartTime->copy()->addMinutes($durationInMinutes);
                 } else {
-                    $adjustedDuration = 0;
+                    // Remote pickup: subtract travel time from start, add travel time to end
+                    $adjustedGuideStartTime = $guideStartTime->copy()->subMinutes($locationDuration);
+                    $guideEndTime = $guideStartTime->copy()->addMinutes($durationInMinutes)->addMinutes($locationDuration);
                 }
 
-                // Calculate final adjusted start time
-                $adjustedGuideStartTime = $guideStartTime->copy()->subMinutes($adjustedDuration);
-                Log::info("Adjusted duration 001: {$durationToOffice}");
-                // Calculate end time
-                $guideEndTime = $guideStartTime->copy()->addMinutes($durationInMinutes)->addMinutes($adjustedDuration);
+                Log::info("Location duration: {$locationDuration} minutes");
+                Log::info("Adjusted start time: {$adjustedGuideStartTime}, End time: {$guideEndTime}");
 
                 // Check if the tour spans across midnight
                 if ($adjustedGuideStartTime->day != $guideEndTime->day) {

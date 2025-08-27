@@ -854,18 +854,13 @@
                     return;
                 }
 
-                // Calculate duration to office
-                const durationToOffice = Math.abs(pickupMoment.diff(officeMoment, 'minutes'));
-
-                // Apply 30-minute deduction rule
-                const adjustedDuration = durationToOffice > 30 ? durationToOffice - 30 : 0;
-
-                // Calculate final pickup time by subtracting adjusted duration from original pickup time
-                const finalPickupTime = moment(pickupTime, 'HH:mm').subtract(adjustedDuration, 'minutes').format('HH:mm');
+                // New logic: Always add travel duration to both start and end
+                // Calculate actual pickup start time by subtracting travel duration
+                const actualPickupTime = moment(pickupTime, 'HH:mm').subtract(response.duration, 'minutes').format('HH:mm');
                 
-                calculatedTimeDiv.find('.pickup-time-value').text(finalPickupTime);
+                calculatedTimeDiv.find('.pickup-time-value').text(actualPickupTime);
                 calculatedTimeDiv.find('.duration-value').text(response.duration);
-                calculatedTimeDiv.hide();
+                calculatedTimeDiv.show();
             },
             error: function() {
                 calculatedTimeDiv.hide();
